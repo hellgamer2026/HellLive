@@ -252,7 +252,7 @@ class _MainShellState extends State<MainShell> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
-  Widget _buildHomeTab() {
+   Widget _buildHomeTab() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -281,3 +281,207 @@ class _MainShellState extends State<MainShell> {
                         const SizedBox(height: 4),
                         Row(
                           children: [
+                            Icon(Icons.circle, size: 12, color: (_tiktokActive || _twitchActive) ? Colors.greenAccent : Colors.orangeAccent),
+                            const SizedBox(width: 6),
+                            Text((_tiktokActive || _twitchActive) ? 'Online' : 'Pronto a Ligar', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(color: Colors.black38, borderRadius: BorderRadius.circular(20)),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.music_note, size: 16, color: Colors.cyanAccent),
+                          SizedBox(width: 4),
+                          Text('TikTok LIVE', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _tiktokController,
+                  decoration: InputDecoration(
+                    hintText: '@utilizador_tiktok',
+                    filled: true,
+                    fillColor: const Color(0xFF081026),
+                    prefixIcon: const Icon(Icons.alternate_email, color: Colors.cyanAccent),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1D6CE0), padding: const EdgeInsets.symmetric(vertical: 12)),
+                    onPressed: _connectPlatforms,
+                    icon: const Icon(Icons.bolt, color: Colors.white),
+                    label: const Text('LIGAR À LIVE AGORA', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          _menuTile(Icons.notifications_active, 'Alertas Personalizados', 'GIFs e sons por presente', () => setState(() => _selectedIndex = 1)),
+          _menuTile(Icons.volume_up, 'Biblioteca de Sons', 'Importar MP3 e testar efeitos', () => setState(() => _selectedIndex = 2)),
+          _menuTile(Icons.record_voice_over, 'Leitura de Comentários', _ttsEnabled ? 'Voz Ativa ($_selectedLanguage)' : 'Voz Desativada', () => setState(() => _selectedIndex = 3)),
+          _menuTile(Icons.emoji_events, 'Pódio & Top Doadores', 'Ranking de likes e presentes (Em breve)', () => _showSnack('Módulo Pódio será ativado na v2.0!')),
+          _menuTile(Icons.volunteer_activism, 'Doações MB Way / PIX', 'Cartão direto para apoiantes (Em breve)', () => _showSnack('Módulo Doações Diretas será ativado na v2.0!')),
+          const SizedBox(height: 18),
+          const Text('FEED EM TEMPO REAL', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white54)),
+          const SizedBox(height: 8),
+          if (_events.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(24),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(color: const Color(0xFF0F1B3D), borderRadius: BorderRadius.circular(12)),
+              child: const Text('Sem eventos recentes. Liga a tua live acima!', style: TextStyle(color: Colors.white54)),
+            )
+          else
+            ..._events.take(15).map((ev) => Card(
+                  color: ev['type'] == 'gift' ? const Color(0xFF1E2D5A) : const Color(0xFF0F1B3D),
+                  child: ListTile(
+                    leading: Icon(ev['type'] == 'gift' ? Icons.card_giftcard : Icons.chat, color: Colors.cyanAccent),
+                    title: Text(ev['user'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text(ev['message'] ?? ''),
+                  ),
+                )),
+        ],
+      ),
+    );
+  }
+
+  Widget _menuTile(IconData icon, String title, String subtitle, VoidCallback onTap) {
+    return Card(
+      color: const Color(0xFF0F1B3D),
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading: Icon(icon, color: const Color(0xFF38BDF8)),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.white60)),
+        trailing: const Icon(Icons.chevron_right, color: Colors.white54),
+        onTap: onTap,
+      ),
+    );
+  }
+
+  Widget _buildCategoryList(String category) {
+    final items = _alertRules.where((r) => r['category'] == category).toList();
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: items.length,
+      itemBuilder: (context, idx) {
+        final item = items[idx];
+        return Card(
+          color: const Color(0xFF0F1B3D),
+          child: ListTile(
+            leading: Icon(item['icon'], color: item['color']),
+            title: Text(item['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Text('Som: ${item['sound']}'),
+            trailing: Switch(
+              activeColor: const Color(0xFF38BDF8),
+              value: item['enabled'],
+              onChanged: (val) => setState(() => item['enabled'] = val),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildAlertsTab() {
+    return DefaultTabController(
+      length: 4,
+      child: Column(
+        children: [
+          const TabBar(
+            indicatorColor: Color(0xFF38BDF8),
+            tabs: [Tab(text: 'Presentes'), Tab(text: 'Seguidores'), Tab(text: 'Gostos'), Tab(text: 'Comentários')],
+          ),
+          Expanded(
+            child: TabBarView(
+              children: [
+                _buildCategoryList('Presentes'),
+                _buildCategoryList('Seguidores'),
+                _buildCategoryList('Gostos'),
+                _buildCategoryList('Comentários'),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: ElevatedButton.icon(
+              onPressed: _importCustomSound,
+              icon: const Icon(Icons.add),
+              label: const Text('Adicionar Som / GIF Personalizado'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSoundsTab() {
+    return Column(
+      children: [
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: _soundsLibrary.length,
+            itemBuilder: (context, index) {
+              final sound = _soundsLibrary[index];
+              return Card(
+                color: const Color(0xFF0F1B3D),
+                child: ListTile(
+                  leading: IconButton(
+                    icon: const Icon(Icons.play_circle_fill, color: Color(0xFF38BDF8)),
+                    onPressed: () async {
+                      if (sound['path']!.isNotEmpty) {
+                        await audioPlayer.play(DeviceFileSource(sound['path']!));
+                      } else {
+                        flutterTts.speak('A testar som ${sound['name']}');
+                      }
+                    },
+                  ),
+                  title: Text(sound['name']!),
+                  subtitle: Text(sound['duration']!),
+                ),
+              );
+            },
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: ElevatedButton.icon(
+            onPressed: _importCustomSound,
+            icon: const Icon(Icons.upload_file),
+            label: const Text('Importar Som (.MP3)'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSettingsTab() {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        SwitchListTile(
+          title: const Text('Ativar Leitura por Voz'),
+          value: _ttsEnabled,
+          onChanged: (val) {
+            setState(() => _ttsEnabled = val);
+            _saveSettings();
+          },
+        ),
+        DropdownButtonFormField<String>(
+          value: _selectedLanguage,
+          items: _supportedLanguages.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
+          onChanged: (val) async {
+            if (val != null) {
+              setState(() => _selectedLanguage = val);
+              await _applyTtsSettings();
