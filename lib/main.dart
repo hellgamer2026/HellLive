@@ -918,6 +918,64 @@ class _MainShellState extends State<MainShell> {
       ],
     );
   }
+  void _openPairDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF0B1636),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: Color(0xFF1E78FF))),
+        title: const Text('Emparelhar Stream Deck'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('1. No aparelho principal (Tablet/PC), gera um código de 6 dígitos:', style: TextStyle(fontSize: 13, color: Colors.white70)),
+            const SizedBox(height: 10),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF)),
+              onPressed: () {
+                final room = _tiktokController.text.trim();
+                if (room.isEmpty) {
+                  _showSnack('Liga primeiro a tua conta TikTok no Início!');
+                } else {
+                  socket.emit('create_pair_code', room);
+                }
+              },
+              icon: const Icon(Icons.qr_code, color: Colors.white),
+              label: const Text('Gerar Código (60s)', style: TextStyle(color: Colors.white)),
+            ),
+            if (_generatedPairCode != null) ...[
+              const SizedBox(height: 8),
+              SelectableText('Código: $_generatedPairCode', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8))),
+            ],
+            const Divider(height: 24, color: Colors.white24),
+            const Text('2. No Telemóvel (Comando Remoto), insere o código:', style: TextStyle(fontSize: 13, color: Colors.white70)),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _pairCodeInputController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(hintText: 'Ex: 482910', border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () {
+                  final code = _pairCodeInputController.text.trim();
+                  if (code.length == 6) {
+                    socket.emit('request_pair', {'code': code, 'deviceName': 'Telemóvel Stream Deck'});
+                    Navigator.pop(ctx);
+                    _showSnack('Pedido enviado! Aceita no Tablet/PC.');
+                  }
+                },
+                child: const Text('Ligar como Stream Deck'),
+              ),
+            ),
+          ],
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Fechar'))],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
