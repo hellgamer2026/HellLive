@@ -80,19 +80,78 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _logoScale;
+  late Animation<double> _logoOpacity;
+  late Animation<double> _glowRadius;
+  late Animation<double> _ringScale;
+  late Animation<double> _ringOpacity;
+  late Animation<double> _titleOpacity;
+  late Animation<Offset> _titleSlide;
+  late Animation<double> _subtitleOpacity;
+  late Animation<double> _progressWidth;
+
   @override
   void initState() {
     super.initState();
-    Timer(const Duration(seconds: 2), () {
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2600),
+    );
+
+    _logoScale = Tween<double>(begin: 0.78, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: const Interval(0.0, 0.45, curve: Curves.easeOutBack)),
+    );
+    _logoOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: const Interval(0.0, 0.30, curve: Curves.easeIn)),
+    );
+    _glowRadius = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 12.0, end: 52.0), weight: 50),
+      TweenSequenceItem(tween: Tween(begin: 52.0, end: 32.0), weight: 50),
+    ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+
+    _ringScale = Tween<double>(begin: 0.7, end: 1.45).animate(
+      CurvedAnimation(parent: _controller, curve: const Interval(0.15, 0.75, curve: Curves.easeOut)),
+    );
+    _ringOpacity = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 0.55), weight: 30),
+      TweenSequenceItem(tween: Tween(begin: 0.55, end: 0.0), weight: 70),
+    ]).animate(CurvedAnimation(parent: _controller, curve: const Interval(0.15, 0.80)));
+
+    _titleOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: const Interval(0.28, 0.58, curve: Curves.easeOut)),
+    );
+    _titleSlide = Tween<Offset>(begin: const Offset(0, 0.25), end: Offset.zero).animate(
+      CurvedAnimation(parent: _controller, curve: const Interval(0.28, 0.58, curve: Curves.easeOutCubic)),
+    );
+
+    _subtitleOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: const Interval(0.48, 0.78, curve: Curves.easeIn)),
+    );
+    _progressWidth = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: const Interval(0.20, 0.95, curve: Curves.easeInOut)),
+    );
+
+    _controller.forward();
+
+    Timer(const Duration(milliseconds: 3000), () {
       if (mounted) {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (_) => MainShell(currentTheme: widget.currentTheme, onThemeChanged: widget.onThemeChanged),
+          PageRouteBuilder(
+            transitionDuration: const Duration(milliseconds: 600),
+            pageBuilder: (_, __, ___) => MainShell(currentTheme: widget.currentTheme, onThemeChanged: widget.onThemeChanged),
+            transitionsBuilder: (_, anim, __, child) => FadeTransition(opacity: anim, child: child),
           ),
         );
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
@@ -102,37 +161,141 @@ class _SplashScreenState extends State<SplashScreen> {
         width: double.infinity,
         decoration: const BoxDecoration(
           gradient: RadialGradient(
-            center: Alignment(0, -0.15),
-            radius: 0.9,
-            colors: [Color(0xFF122B6B), Color(0xFF050B1E)],
+            center: Alignment(0, -0.18),
+            radius: 1.0,
+            colors: [Color(0xFF132E73), Color(0xFF07112E), Color(0xFF040817)],
           ),
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Spacer(),
-            Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                boxShadow: [BoxShadow(color: const Color(0xFF1E78FF).withOpacity(0.5), blurRadius: 40, spreadRadius: 5)],
-              ),
-              child: Image.asset('icon.png', fit: BoxFit.contain, errorBuilder: (_, __, ___) {
-                return const Icon(Icons.local_fire_department, size: 90, color: Color(0xFF38BDF8));
-              }),
-            ),
-            const SizedBox(height: 20),
-            const Text('HELL', style: TextStyle(fontSize: 42, fontWeight: FontWeight.w900, letterSpacing: 4, color: Colors.white)),
-            const Text('Live', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, letterSpacing: 4, color: Color(0xFF38BDF8))),
-            const SizedBox(height: 12),
-            const Text('LIVE  ·  PLAY  ·  CONNECT', style: TextStyle(fontSize: 11, letterSpacing: 3, color: Colors.white60)),
-            const Spacer(),
-            const Padding(
-              padding: EdgeInsets.only(bottom: 40),
-              child: Text('A tua live, no teu comando.', style: TextStyle(fontSize: 14, color: Color(0xFF7DD3FC), letterSpacing: 0.8)),
-            ),
-          ],
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (context, _) {
+            return Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Spacer(flex: 3),
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Transform.scale(
+                      scale: _ringScale.value,
+                      child: Container(
+                        width: 140,
+                        height: 140,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: const Color(0xFF38BDF8).withOpacity(_ringOpacity.value),
+                            width: 1.8,
+                          ),
+                        ),
+                      ),
+                    ),
+                    FadeTransition(
+                      opacity: _logoOpacity,
+                      child: Transform.scale(
+                        scale: _logoScale.value,
+                        child: Container(
+                          width: 132,
+                          height: 132,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF1E78FF).withOpacity(0.55),
+                                blurRadius: _glowRadius.value,
+                                spreadRadius: 4,
+                              ),
+                              BoxShadow(
+                                color: const Color(0xFF38BDF8).withOpacity(0.25),
+                                blurRadius: _glowRadius.value * 1.4,
+                                spreadRadius: 1,
+                              ),
+                            ],
+                          ),
+                          child: Image.asset('icon.png', fit: BoxFit.contain, errorBuilder: (_, __, ___) {
+                            return const Icon(Icons.local_fire_department, size: 95, color: Color(0xFF38BDF8));
+                          }),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 28),
+                FadeTransition(
+                  opacity: _titleOpacity,
+                  child: SlideTransition(
+                    position: _titleSlide,
+                    child: Column(
+                      children: [
+                        RichText(
+                          text: const TextSpan(
+                            children: [
+                              TextSpan(
+                                text: 'HELL ',
+                                style: TextStyle(fontSize: 38, fontWeight: FontWeight.w900, letterSpacing: 4, color: Colors.white),
+                              ),
+                              TextSpan(
+                                text: 'Live',
+                                style: TextStyle(fontSize: 38, fontWeight: FontWeight.w800, letterSpacing: 2, color: Color(0xFF38BDF8)),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Container(
+                          width: 160,
+                          height: 1.5,
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [Colors.transparent, Color(0xFF38BDF8), Colors.transparent],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        const Text(
+                          'LIVE  ·  PLAY  ·  CONNECT',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 3.5, color: Colors.white70),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const Spacer(flex: 3),
+                FadeTransition(
+                  opacity: _subtitleOpacity,
+                  child: Column(
+                    children: [
+                      const Text(
+                        'A tua live, no teu comando.',
+                        style: TextStyle(fontSize: 13.5, color: Color(0xFF7DD3FC), letterSpacing: 0.8),
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        width: 140,
+                        height: 3,
+                        decoration: BoxDecoration(
+                          color: Colors.white10,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        alignment: Alignment.centerLeft,
+                        child: FractionallySizedBox(
+                          widthFactor: _progressWidth.value,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(colors: [Color(0xFF1E78FF), Color(0xFF38BDF8)]),
+                              borderRadius: BorderRadius.circular(4),
+                              boxShadow: const [BoxShadow(color: Color(0xFF38BDF8), blurRadius: 6)],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 42),
+              ],
+            );
+          },
         ),
       ),
     );
