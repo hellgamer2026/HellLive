@@ -485,3 +485,68 @@ class _MainShellState extends State<MainShell> {
             if (val != null) {
               setState(() => _selectedLanguage = val);
               await _applyTtsSettings();
+                            await _saveSettings();
+            }
+          },
+        ),
+        Slider(
+          value: _speechRate,
+          min: 0.25,
+          max: 1.0,
+          divisions: 6,
+          onChanged: (val) async {
+            setState(() => _speechRate = val);
+            await _applyTtsSettings();
+            await _saveSettings();
+          },
+        ),
+        RadioListTile<String>(
+          title: const Text('Azul (Padrão HELL LIVE)'),
+          value: 'azul',
+          groupValue: _themeMode,
+          onChanged: (val) => widget.onThemeChanged(val!),
+        ),
+        RadioListTile<String>(
+          title: const Text('Escuro'),
+          value: 'escuro',
+          groupValue: _themeMode,
+          onChanged: (val) => widget.onThemeChanged(val!),
+        ),
+        RadioListTile<String>(
+          title: const Text('Claro'),
+          value: 'claro',
+          groupValue: _themeMode,
+          onChanged: (val) => widget.onThemeChanged(val!),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tabs = [_buildHomeTab(), _buildAlertsTab(), _buildSoundsTab(), _buildSettingsTab()];
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('HELL LIVE', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.5)),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: Icon(Icons.cloud_done, color: _isConnectedToServer ? Colors.greenAccent : Colors.redAccent),
+          ),
+        ],
+      ),
+      body: tabs[_selectedIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: (idx) => setState(() => _selectedIndex = idx),
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Início'),
+          BottomNavigationBarItem(icon: Icon(Icons.notifications), label: 'Alertas'),
+          BottomNavigationBarItem(icon: Icon(Icons.music_note), label: 'Sons'),
+          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Definições'),
+        ],
+      ),
+    );
+  }
+}
+
