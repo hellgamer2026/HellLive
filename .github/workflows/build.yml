@@ -41,6 +41,9 @@ jobs:
               }
           }
           EOF
+                   sudo apt-get update && sudo apt-get install -y python3-pil
+          python3 -c "from PIL import Image, ImageDraw; img = Image.open('icon.png').convert('RGBA'); px = [(r, g, b, 0) if (r < 25 and g < 25 and b < 35) else (r, g, b, a) for r, g, b, a in img.getdata()]; img.putdata(px); bg = Image.new('RGBA', (1024, 1024), (7, 20, 54, 255)); glow = Image.new('RGBA', (1024, 1024), (0, 0, 0, 0)); draw = ImageDraw.Draw(glow); [draw.ellipse([512-r, 512-r, 512+r, 512+r], fill=(30, 120, 255, int(110*(1-r/420)))) for r in range(420, 0, -8)]; bg = Image.alpha_composite(bg, glow); fg = img.resize((620, 620)); bg.paste(fg, (202, 202), fg); bg.save('icon_tablet.png')"
+
           python3 -c "from PIL import Image, ImageDraw; img = Image.open('icon.png').convert('RGBA'); px = [(r, g, b, 0) if (r < 25 and g < 25 and b < 35) else (r, g, b, a) for r, g, b, a in img.getdata()]; img.putdata(px); bg = Image.new('RGBA', (1024, 1024), (7, 20, 54, 255)); glow = Image.new('RGBA', (1024, 1024), (0, 0, 0, 0)); draw = ImageDraw.Draw(glow); [draw.ellipse([512-r, 512-r, 512+r, 512+r], fill=(30, 120, 255, int(110*(1-r/420)))) for r in range(420, 0, -8)]; bg = Image.alpha_composite(bg, glow); fg = img.resize((620, 620)); bg.paste(fg, (202, 202), fg); bg.save('icon_tablet.png')"
           sed -i 's/adaptive_icon_background: "#000000"/adaptive_icon_background: "#071436"/g' pubspec.yaml
           sed -i 's/adaptive_icon_foreground: "icon.png"/adaptive_icon_foreground: "icon_tablet.png"/g' pubspec.yaml
