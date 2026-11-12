@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -28,10 +29,7 @@ class _HellLiveAppState extends State<HellLiveApp> {
     if (_themeMode == 'claro') {
       return ThemeData.light().copyWith(
         primaryColor: const Color(0xFF1D6CE0),
-        colorScheme: const ColorScheme.light(
-          primary: Color(0xFF1D6CE0),
-          secondary: Color(0xFF38BDF8),
-        ),
+        colorScheme: const ColorScheme.light(primary: Color(0xFF1D6CE0), secondary: Color(0xFF38BDF8)),
       );
     } else if (_themeMode == 'escuro') {
       return ThemeData.dark().copyWith(
@@ -51,20 +49,14 @@ class _HellLiveAppState extends State<HellLiveApp> {
       scaffoldBackgroundColor: const Color(0xFF050B1E),
       cardColor: const Color(0xFF0B1636),
       primaryColor: const Color(0xFF1E78FF),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xFF050B1E),
-        elevation: 0,
-      ),
+      appBarTheme: const AppBarTheme(backgroundColor: Color(0xFF050B1E), elevation: 0),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: Color(0xFF07102B),
         selectedItemColor: Color(0xFF38BDF8),
         unselectedItemColor: Colors.white54,
         type: BottomNavigationBarType.fixed,
       ),
-      colorScheme: const ColorScheme.dark(
-        primary: Color(0xFF1E78FF),
-        secondary: Color(0xFF38BDF8),
-      ),
+      colorScheme: const ColorScheme.dark(primary: Color(0xFF1E78FF), secondary: Color(0xFF38BDF8)),
     );
   }
 
@@ -74,10 +66,7 @@ class _HellLiveAppState extends State<HellLiveApp> {
       title: 'HELL Live',
       debugShowCheckedModeBanner: false,
       theme: _buildTheme(),
-      home: SplashScreen(
-        currentTheme: _themeMode,
-        onThemeChanged: _changeTheme,
-      ),
+      home: SplashScreen(currentTheme: _themeMode, onThemeChanged: _changeTheme),
     );
   }
 }
@@ -85,7 +74,6 @@ class _HellLiveAppState extends State<HellLiveApp> {
 class SplashScreen extends StatefulWidget {
   final String currentTheme;
   final Function(String) onThemeChanged;
-
   const SplashScreen({super.key, required this.currentTheme, required this.onThemeChanged});
 
   @override
@@ -100,10 +88,7 @@ class _SplashScreenState extends State<SplashScreen> {
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (_) => MainShell(
-              currentTheme: widget.currentTheme,
-              onThemeChanged: widget.onThemeChanged,
-            ),
+            builder: (_) => MainShell(currentTheme: widget.currentTheme, onThemeChanged: widget.onThemeChanged),
           ),
         );
       }
@@ -131,35 +116,21 @@ class _SplashScreenState extends State<SplashScreen> {
               height: 120,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(color: const Color(0xFF1E78FF).withOpacity(0.5), blurRadius: 40, spreadRadius: 5),
-                ],
+                boxShadow: [BoxShadow(color: const Color(0xFF1E78FF).withOpacity(0.5), blurRadius: 40, spreadRadius: 5)],
               ),
               child: Image.asset('icon.png', fit: BoxFit.contain, errorBuilder: (_, __, ___) {
                 return const Icon(Icons.local_fire_department, size: 90, color: Color(0xFF38BDF8));
               }),
             ),
             const SizedBox(height: 20),
-            const Text(
-              'HELL',
-              style: TextStyle(fontSize: 42, fontWeight: FontWeight.w900, letterSpacing: 4, color: Colors.white),
-            ),
-            const Text(
-              'Live',
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, letterSpacing: 4, color: Color(0xFF38BDF8)),
-            ),
+            const Text('HELL', style: TextStyle(fontSize: 42, fontWeight: FontWeight.w900, letterSpacing: 4, color: Colors.white)),
+            const Text('Live', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, letterSpacing: 4, color: Color(0xFF38BDF8))),
             const SizedBox(height: 12),
-            const Text(
-              'LIVE  ·  PLAY  ·  CONNECT',
-              style: TextStyle(fontSize: 11, letterSpacing: 3, color: Colors.white60),
-            ),
+            const Text('LIVE  ·  PLAY  ·  CONNECT', style: TextStyle(fontSize: 11, letterSpacing: 3, color: Colors.white60)),
             const Spacer(),
             const Padding(
               padding: EdgeInsets.only(bottom: 40),
-              child: Text(
-                'A tua live, no teu comando.',
-                style: TextStyle(fontSize: 14, color: Color(0xFF7DD3FC), letterSpacing: 0.8),
-              ),
+              child: Text('A tua live, no teu comando.', style: TextStyle(fontSize: 14, color: Color(0xFF7DD3FC), letterSpacing: 0.8)),
             ),
           ],
         ),
@@ -171,7 +142,6 @@ class _SplashScreenState extends State<SplashScreen> {
 class MainShell extends StatefulWidget {
   final String currentTheme;
   final Function(String) onThemeChanged;
-
   const MainShell({super.key, required this.currentTheme, required this.onThemeChanged});
 
   @override
@@ -179,62 +149,64 @@ class MainShell extends StatefulWidget {
 }
 
 class _MainShellState extends State<MainShell> {
-  int _selectedIndex = 0;
+  int _selectedIndex = 0; // 0: Início, 1: Alertas, 2: Sons/Deck, 3: Voz, 4: Definições, 5: Pódio/Roleta, 6: Overlays/Doações
 
   final String serverUrl = 'https://onrender.com';
   late IO.Socket socket;
   final FlutterTts flutterTts = FlutterTts();
-  final AudioPlayer audioPlayer = AudioPlayer();
+  final AudioPlayer ttsAudioPlayer = AudioPlayer();
+  final AudioPlayer sfxAudioPlayer = AudioPlayer();
 
   final TextEditingController _tiktokController = TextEditingController();
+  final TextEditingController _mbwayController = TextEditingController();
+  final TextEditingController _pixController = TextEditingController();
+  final TextEditingController _donationImgController = TextEditingController();
+  final TextEditingController _pairCodeInputController = TextEditingController();
+
   bool _isConnectedToServer = false;
   bool _tiktokActive = false;
   bool _ttsEnabled = true;
   bool _ignoreEmojiOnly = true;
+  String? _generatedPairCode;
+  String? _pairedRemoteRoom;
 
-  String _selectedLanguage = 'pt-PT';
-  String _selectedVoicePreset = 'Feminina Normal';
+  String _selectedVoiceKey = 'pt-PT-DuarteNeural';
   double _speechRate = 0.5;
 
-  final Map<String, String> _supportedLanguages = {
-    'pt-PT': 'Português (Portugal)',
-    'pt-BR': 'Português (Brasil)',
-    'en-US': 'Inglês (EUA)',
-    'es-ES': 'Espanhol (Espanha)',
-    'fr-FR': 'Francês (França)',
+  // Vozes Neurais Reais (Masculinas e Femininas)
+  final Map<String, Map<String, String>> _neuralVoices = {
+    'pt-PT-DuarteNeural': {'label': 'Masculina PT-PT (Duarte)', 'pitch': '+0Hz'},
+    'pt-PT-DuarteNeural|grave': {'label': 'Masculina PT-PT Grave (Locutor)', 'pitch': '-15Hz'},
+    'pt-PT-RaquelNeural': {'label': 'Feminina PT-PT (Raquel)', 'pitch': '+0Hz'},
+    'pt-PT-RaquelNeural|aguda': {'label': 'Feminina PT-PT Energética', 'pitch': '+12Hz'},
+    'pt-BR-AntonioNeural': {'label': 'Masculina PT-BR (António)', 'pitch': '+0Hz'},
+    'pt-BR-FranciscaNeural': {'label': 'Feminina PT-BR (Francisca)', 'pitch': '+0Hz'},
+    'en-US-GuyNeural': {'label': 'Masculina Inglês (Guy)', 'pitch': '+0Hz'},
+    'en-US-JennyNeural': {'label': 'Feminina Inglês (Jenny)', 'pitch': '+0Hz'},
+    'es-ES-AlvaroNeural': {'label': 'Masculina Espanhol (Álvaro)', 'pitch': '+0Hz'},
   };
 
-  final Map<String, double> _voicePresets = {
-    'Feminina Normal': 1.05,
-    'Feminina Energética': 1.25,
-    'Feminina Grave': 0.90,
-    'Masculina Normal': 0.85,
-    'Masculina Grave (Locutor)': 0.65,
-    'Masculina Jovem': 0.98,
-  };
+  List<Map<String, dynamic>> _topGifts = [];
+  List<Map<String, dynamic>> _topLikes = [];
 
-  final List<Map<String, dynamic>> _events = [];
-
-  final List<Map<String, dynamic>> _alertRules = [
-    {'name': 'Moeda', 'category': 'Presentes', 'sound': 'Moeda.mp3', 'enabled': true, 'icon': Icons.monetization_on, 'color': const Color(0xFFFBBF24)},
-    {'name': 'Leão', 'category': 'Presentes', 'sound': 'Leao.mp3', 'enabled': true, 'icon': Icons.pets, 'color': const Color(0xFFF97316)},
-    {'name': 'Rosa', 'category': 'Presentes', 'sound': 'Rosa.mp3', 'enabled': true, 'icon': Icons.local_florist, 'color': const Color(0xFFF43F5E)},
-    {'name': 'TikTok', 'category': 'Presentes', 'sound': 'TikTok.mp3', 'enabled': true, 'icon': Icons.music_note, 'color': const Color(0xFF22D3EE)},
-    {'name': 'GG', 'category': 'Presentes', 'sound': 'GG.mp3', 'enabled': true, 'icon': Icons.sports_esports, 'color': const Color(0xFFEF4444)},
-    {'name': 'Outro Presente', 'category': 'Presentes', 'sound': 'Presente.mp3', 'enabled': true, 'icon': Icons.card_giftcard, 'color': const Color(0xFFA855F7)},
-    {'name': 'Novo Seguidor', 'category': 'Seguidores', 'sound': 'Seguidor.mp3', 'enabled': true, 'icon': Icons.person_add, 'color': const Color(0xFF38BDF8)},
-    {'name': 'Gostos / Likes', 'category': 'Gostos', 'sound': 'Like.mp3', 'enabled': false, 'icon': Icons.favorite, 'color': const Color(0xFFEC4899)},
-    {'name': 'Comentário TTS', 'category': 'Comentários', 'sound': 'Comentario.mp3', 'enabled': true, 'icon': Icons.chat_bubble, 'color': const Color(0xFF10B981)},
+    final List<Map<String, dynamic>> _alertRules = [
+    {'name': 'Moeda', 'category': 'Presentes', 'sound': 'Moeda.mp3', 'gif': 'https://giphy.com', 'enabled': true, 'icon': Icons.monetization_on, 'color': const Color(0xFFFBBF24)},
+    {'name': 'Leão', 'category': 'Presentes', 'sound': 'Leao.mp3', 'gif': 'https://giphy.com', 'enabled': true, 'icon': Icons.pets, 'color': const Color(0xFFF97316)},
+    {'name': 'Rosa', 'category': 'Presentes', 'sound': 'Rosa.mp3', 'gif': 'https://giphy.com', 'enabled': true, 'icon': Icons.local_florist, 'color': const Color(0xFFF43F5E)},
+    {'name': 'TikTok', 'category': 'Presentes', 'sound': 'TikTok.mp3', 'gif': 'https://giphy.com', 'enabled': true, 'icon': Icons.music_note, 'color': const Color(0xFF22D3EE)},
+    {'name': 'GG', 'category': 'Presentes', 'sound': 'GG.mp3', 'gif': 'https://giphy.com', 'enabled': true, 'icon': Icons.sports_esports, 'color': const Color(0xFFEF4444)},
+    {'name': 'Novo Seguidor', 'category': 'Seguidores', 'sound': 'Seguidor.mp3', 'gif': 'https://giphy.com', 'enabled': true, 'icon': Icons.person_add, 'color': const Color(0xFF38BDF8)},
+    {'name': 'Gostos / Likes', 'category': 'Gostos', 'sound': 'Like.mp3', 'gif': 'https://giphy.com', 'enabled': false, 'icon': Icons.favorite, 'color': const Color(0xFFEC4899)},
+    {'name': 'Comentário TTS', 'category': 'Comentários', 'sound': 'Comentario.mp3', 'gif': '', 'enabled': true, 'icon': Icons.chat_bubble, 'color': const Color(0xFF10B981)},
   ];
 
   final List<Map<String, String>> _soundsLibrary = [
-    {'name': 'Moeda.mp3', 'duration': '00:05', 'cat': 'Presentes', 'path': ''},
-    {'name': 'Leao.mp3', 'duration': '00:06', 'cat': 'Presentes', 'path': ''},
-    {'name': 'Rosa.mp3', 'duration': '00:04', 'cat': 'Presentes', 'path': ''},
-    {'name': 'TikTok.mp3', 'duration': '00:05', 'cat': 'Presentes', 'path': ''},
-    {'name': 'GG.mp3', 'duration': '00:04', 'cat': 'Presentes', 'path': ''},
-    {'name': 'Seguidor.mp3', 'duration': '00:05', 'cat': 'Eventos', 'path': ''},
-    {'name': 'Comentário.mp3', 'duration': '00:06', 'cat': 'Eventos', 'path': ''},
+    {'name': 'Aplausos Plateia', 'duration': '00:04', 'cat': 'Eventos', 'url': 'https://google.com', 'path': ''},
+    {'name': 'Moeda / Vitória', 'duration': '00:02', 'cat': 'Presentes', 'url': 'https://google.com', 'path': ''},
+    {'name': 'Buzina Épica', 'duration': '00:03', 'cat': 'Eventos', 'url': 'https://google.com', 'path': ''},
+    {'name': 'Sino de Alerta', 'duration': '00:02', 'cat': 'Presentes', 'url': 'https://google.com', 'path': ''},
+    {'name': 'Tambor Suspense', 'duration': '00:04', 'cat': 'Eventos', 'url': 'https://google.com', 'path': ''},
+    {'name': 'Foguetes Festa', 'duration': '00:05', 'cat': 'Presentes', 'url': 'https://google.com', 'path': ''},
   ];
   @override
   void initState() {
@@ -247,44 +219,60 @@ class _MainShellState extends State<MainShell> {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _tiktokController.text = prefs.getString('tiktok_user') ?? '';
+      _mbwayController.text = prefs.getString('mbway_key') ?? '';
+      _pixController.text = prefs.getString('pix_key') ?? '';
+      _donationImgController.text = prefs.getString('donation_img') ?? '';
       _ttsEnabled = prefs.getBool('tts_enabled') ?? true;
-      _selectedLanguage = prefs.getString('tts_lang') ?? 'pt-PT';
+      final savedVoice = prefs.getString('tts_voice') ?? 'pt-PT-DuarteNeural';
+      if (_neuralVoices.containsKey(savedVoice)) _selectedVoiceKey = savedVoice;
       _speechRate = prefs.getDouble('tts_rate') ?? 0.5;
-      final savedPreset = prefs.getString('tts_preset') ?? 'Feminina Normal';
-      if (_voicePresets.containsKey(savedPreset)) {
-        _selectedVoicePreset = savedPreset;
-      }
     });
-    await _applyTtsSettings();
   }
 
   Future<void> _saveSettings() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('tiktok_user', _tiktokController.text.trim());
+    await prefs.setString('mbway_key', _mbwayController.text.trim());
+    await prefs.setString('pix_key', _pixController.text.trim());
+    await prefs.setString('donation_img', _donationImgController.text.trim());
     await prefs.setBool('tts_enabled', _ttsEnabled);
-    await prefs.setString('tts_lang', _selectedLanguage);
+    await prefs.setString('tts_voice', _selectedVoiceKey);
     await prefs.setDouble('tts_rate', _speechRate);
-    await prefs.setString('tts_preset', _selectedVoicePreset);
   }
 
-  Future<void> _applyTtsSettings() async {
-    await flutterTts.setLanguage(_selectedLanguage);
-    await flutterTts.setSpeechRate(_speechRate);
-    await flutterTts.setPitch(_voicePresets[_selectedVoicePreset] ?? 1.0);
+  Future<void> _speakNeural(String text) async {
+    try {
+      final parts = _selectedVoiceKey.split('|');
+      final voiceName = parts[0];
+      final pitch = _neuralVoices[_selectedVoiceKey]?['pitch'] ?? '+0Hz';
+      final ratePct = '${((_speechRate - 0.5) * 100).round() >= 0 ? "+" : ""}${((_speechRate - 0.5) * 100).round()}%';
+      final uri = Uri.parse('$serverUrl/tts').replace(queryParameters: {
+        'text': text,
+        'voice': voiceName,
+        'rate': ratePct,
+        'pitch': pitch,
+      });
+      await ttsAudioPlayer.stop();
+      await ttsAudioPlayer.play(UrlSource(uri.toString()));
+    } catch (_) {
+      await flutterTts.speak(text);
+    }
   }
 
   Future<void> _panicSilenceAll() async {
+    await ttsAudioPlayer.stop();
+    await sfxAudioPlayer.stop();
     await flutterTts.stop();
-    await audioPlayer.stop();
     _showSnack('Silêncio ativado! Voz e sons interrompidos.');
   }
 
   void _initSocket() {
-    socket = IO.io(
-      serverUrl,
-      IO.OptionBuilder().setTransports(['websocket']).disableAutoConnect().build(),
-    );
-    socket.onConnect((_) => setState(() => _isConnectedToServer = true));
+    socket = IO.io(serverUrl, IO.OptionBuilder().setTransports(['websocket']).disableAutoConnect().build());
+    socket.onConnect((_) {
+      setState(() => _isConnectedToServer = true);
+      final room = _pairedRemoteRoom ?? _tiktokController.text.trim();
+      if (room.isNotEmpty) socket.emit('join_room', room);
+    });
     socket.onDisconnect((_) => setState(() {
           _isConnectedToServer = false;
           _tiktokActive = false;
@@ -293,45 +281,82 @@ class _MainShellState extends State<MainShell> {
       setState(() {
         if (data['platform'] == 'tiktok') _tiktokActive = data['connected'] == true;
       });
-      if (data['connected'] == false) {
-        _showSnack(data['error'] ?? 'Live offline ou utilizador inválido.');
+      if (data['connected'] == false) _showSnack(data['error'] ?? 'Live offline ou utilizador inválido.');
+    });
+    socket.on('podium_update', (data) {
+      setState(() {
+        if (data['topGifts'] != null) _topGifts = List<Map<String, dynamic>>.from(data['topGifts']);
+        if (data['topLikes'] != null) _topLikes = List<Map<String, dynamic>>.from(data['topLikes']);
+      });
+    });
+    socket.on('pair_code_created', (data) {
+      setState(() => _generatedPairCode = data['code']);
+    });
+    socket.on('pair_approval_needed', (data) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: const Color(0xFF0B1636),
+          title: const Text('Pedido de Emparelhamento'),
+          content: Text('O dispositivo "${data['deviceName']}" quer ligar-se como Stream Deck. Aceitar?'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Recusar')),
+            ElevatedButton(
+              onPressed: () {
+                socket.emit('approve_pair', {'remoteSocketId': data['remoteSocketId'], 'code': data['code']});
+                Navigator.pop(ctx);
+                _showSnack('Stream Deck emparelhado!');
+              },
+              child: const Text('Aceitar'),
+            ),
+          ],
+        ),
+      );
+    });
+    socket.on('pair_approved', (data) {
+      setState(() => _pairedRemoteRoom = data['room']);
+      socket.emit('join_room', data['room']);
+      _showSnack('Ligado ao ecrã principal com sucesso!');
+    });
+    socket.on('execute_remote_command', (data) {
+      if (data['command'] == 'panic') _panicSilenceAll();
+      if (data['command'] == 'sound' && data['payload'] != null) {
+        sfxAudioPlayer.play(UrlSource(data['payload']));
       }
     });
     socket.on('live_event', (data) {
       final event = Map<String, dynamic>.from(data);
-      setState(() {
-        _events.insert(0, event);
-        if (_events.length > 50) _events.removeLast();
-      });
-      if (_ttsEnabled) {
-        final user = event['user'] ?? 'Alguém';
-        final msg = (event['message'] ?? '').toString();
-        if (_ignoreEmojiOnly && event['type'] != 'gift') {
-          final hasLettersOrDigits = RegExp(r'[a-zA-Z0-9À-ÿ]').hasMatch(msg);
-          if (!hasLettersOrDigits) return;
+      final user = event['user'] ?? 'Alguém';
+      final msg = (event['message'] ?? '').toString();
+      if (event['type'] == 'gift') {
+        final room = _tiktokController.text.trim();
+        final rule = _alertRules.firstWhere((r) => r['enabled'] == true, orElse: () => _alertRules[0]);
+        if (room.isNotEmpty) {
+          socket.emit('trigger_overlay_alert', {
+            'room': room,
+            'alertData': {'user': '$user $msg', 'message': '', 'gifUrl': rule['gif'], 'duration': 5}
+          });
         }
-        flutterTts.speak(event['type'] == 'gift' ? 'Novo presente! $user $msg' : '$user diz: $msg');
+      }
+      if (_ttsEnabled) {
+        if (_ignoreEmojiOnly && event['type'] != 'gift') {
+          if (!RegExp(r'[a-zA-Z0-9À-ÿ]').hasMatch(msg)) return;
+        }
+        _speakNeural(event['type'] == 'gift' ? 'Novo presente! $user $msg' : '$user diz: $msg');
       }
     });
     socket.connect();
   }
-
   void _connectTikTokDialog() {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF0B1636),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: Color(0xFF1E78FF)),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: Color(0xFF1E78FF))),
         title: const Text('Ligar Conta TikTok LIVE'),
         content: TextField(
           controller: _tiktokController,
-          decoration: const InputDecoration(
-            hintText: '@teu_utilizador',
-            prefixIcon: Icon(Icons.alternate_email, color: Color(0xFF38BDF8)),
-          ),
+          decoration: const InputDecoration(hintText: '@teu_utilizador', prefixIcon: Icon(Icons.alternate_email, color: Color(0xFF38BDF8))),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
@@ -359,12 +384,7 @@ class _MainShellState extends State<MainShell> {
     final result = await FilePicker.platform.pickFiles(type: FileType.audio);
     if (result != null && result.files.single.path != null) {
       setState(() {
-        _soundsLibrary.insert(0, {
-          'name': result.files.single.name,
-          'duration': 'Custom',
-          'cat': 'Meus Sons',
-          'path': result.files.single.path!,
-        });
+        _soundsLibrary.insert(0, {'name': result.files.single.name, 'duration': 'Custom', 'cat': 'Meus Sons', 'url': '', 'path': result.files.single.path!});
       });
       _showSnack('Som "${result.files.single.name}" adicionado!');
     }
@@ -376,16 +396,10 @@ class _MainShellState extends State<MainShell> {
 
   BoxDecoration _neonCardDecoration() {
     return BoxDecoration(
-      gradient: const LinearGradient(
-        colors: [Color(0xFF0E1D47), Color(0xFF08112B)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
+      gradient: const LinearGradient(colors: [Color(0xFF0E1D47), Color(0xFF08112B)], begin: Alignment.topLeft, end: Alignment.bottomRight),
       borderRadius: BorderRadius.circular(14),
       border: Border.all(color: const Color(0xFF1E429F), width: 1.2),
-      boxShadow: [
-        BoxShadow(color: const Color(0xFF1E78FF).withOpacity(0.12), blurRadius: 12, offset: const Offset(0, 4)),
-      ],
+      boxShadow: [BoxShadow(color: const Color(0xFF1E78FF).withOpacity(0.12), blurRadius: 12, offset: const Offset(0, 4))],
     );
   }
 
@@ -410,24 +424,14 @@ class _MainShellState extends State<MainShell> {
                       Row(
                         children: [
                           Container(
-                            width: 10,
-                            height: 10,
+                            width: 10, height: 10,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: _tiktokActive ? const Color(0xFF22C55E) : const Color(0xFF38BDF8),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: (_tiktokActive ? const Color(0xFF22C55E) : const Color(0xFF38BDF8)).withOpacity(0.8),
-                                  blurRadius: 8,
-                                ),
-                              ],
+                              color: (_tiktokActive || _pairedRemoteRoom != null) ? const Color(0xFF22C55E) : const Color(0xFF38BDF8),
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Text(
-                            _tiktokActive ? 'Online' : 'Tocar para Ligar',
-                            style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Colors.white),
-                          ),
+                          Text(_tiktokActive ? 'Online' : (_pairedRemoteRoom != null ? 'Stream Deck Ligado' : 'Tocar para Ligar'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
                         ],
                       ),
                     ],
@@ -436,11 +440,7 @@ class _MainShellState extends State<MainShell> {
                     children: [
                       Container(
                         padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.black45,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.white12),
-                        ),
+                        decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white12)),
                         child: const Icon(Icons.music_note, color: Color(0xFF38BDF8), size: 22),
                       ),
                       const SizedBox(height: 4),
@@ -452,22 +452,17 @@ class _MainShellState extends State<MainShell> {
             ),
           ),
           const SizedBox(height: 14),
-          _neonMenuTile(Icons.notifications_none, 'Alertas', () => setState(() => _selectedIndex = 1)),
+          _neonMenuTile(Icons.notifications_none, 'Alertas & GIFs', () => setState(() => _selectedIndex = 1)),
           _neonMenuTile(Icons.volume_up_outlined, 'Sons & Stream Deck', () => setState(() => _selectedIndex = 2)),
           _neonMenuTile(Icons.chat_bubble_outline, 'Comentários & Vozes', () => setState(() => _selectedIndex = 3)),
-          _neonMenuTile(Icons.emoji_events_outlined, 'Pódio & Roleta Interativa', () => _showSnack('Pódio & Roleta Interativa chegam na v2.0!')),
-          _neonMenuTile(Icons.volunteer_activism_outlined, 'Overlays & Doações MB Way/PIX', () => _showSnack('Overlays & Doações Diretas chegam na v2.0!')),
+          _neonMenuTile(Icons.emoji_events_outlined, 'Pódio & Roleta Interativa', () => setState(() => _selectedIndex = 5)),
+          _neonMenuTile(Icons.volunteer_activism_outlined, 'Overlays & Doações MB Way/PIX', () => setState(() => _selectedIndex = 6)),
+          _neonMenuTile(Icons.devices, 'Emparelhar 2.º Ecrã (QR / Código)', () => setState(() => _selectedIndex = 7)),
           _neonMenuTile(Icons.settings_outlined, 'Definições & PRO', () => setState(() => _selectedIndex = 4)),
-          const SizedBox(height: 24),
-          const Text(
-            'HELL Live',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: 2.5, color: Colors.white70),
-          ),
+          const SizedBox(height: 20),
+          const Text('HELL Live', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: 2.5, color: Colors.white70)),
           const SizedBox(height: 4),
-          const Text(
-            'LIVE  ·  PLAY  ·  CONNECT',
-            style: TextStyle(fontSize: 10, letterSpacing: 2.5, color: Color(0xFF38BDF8)),
-          ),
+          const Text('LIVE  ·  PLAY  ·  CONNECT', style: TextStyle(fontSize: 10, letterSpacing: 2.5, color: Color(0xFF38BDF8))),
           const SizedBox(height: 16),
         ],
       ),
@@ -485,17 +480,11 @@ class _MainShellState extends State<MainShell> {
           children: [
             Container(
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E78FF).withOpacity(0.18),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFF38BDF8).withOpacity(0.4)),
-              ),
+              decoration: BoxDecoration(color: const Color(0xFF1E78FF).withOpacity(0.18), borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFF38BDF8).withOpacity(0.4))),
               child: Icon(icon, color: const Color(0xFF38BDF8), size: 22),
             ),
             const SizedBox(width: 16),
-            Expanded(
-              child: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),
-            ),
+            Expanded(child: Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white))),
             const Icon(Icons.chevron_right, color: Colors.white54),
           ],
         ),
@@ -517,12 +506,8 @@ class _MainShellState extends State<MainShell> {
           child: Row(
             children: [
               Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: (item['color'] as Color).withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(10),
-                ),
+                width: 44, height: 44,
+                decoration: BoxDecoration(color: (item['color'] as Color).withOpacity(0.15), borderRadius: BorderRadius.circular(10)),
                 child: Icon(item['icon'], color: item['color'], size: 26),
               ),
               const SizedBox(width: 14),
@@ -531,17 +516,27 @@ class _MainShellState extends State<MainShell> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(item['name'], style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 2),
-                    Text('Som: ${item['sound']}', style: const TextStyle(fontSize: 12, color: Colors.white54)),
+                    Text(item['gif'].toString().isNotEmpty ? 'GIF + Som ativos' : 'Apenas Voz/Som', style: const TextStyle(fontSize: 12, color: Colors.white54)),
                   ],
                 ),
               ),
-              Switch(
-                activeColor: Colors.white,
-                activeTrackColor: const Color(0xFF1E78FF),
-                value: item['enabled'],
-                onChanged: (v) => setState(() => item['enabled'] = v),
+              IconButton(
+                icon: const Icon(Icons.play_circle_outline, color: Color(0xFF38BDF8)),
+                tooltip: 'Testar Alerta na Live',
+                onPressed: () {
+                  final room = _pairedRemoteRoom ?? _tiktokController.text.trim();
+                  if (room.isNotEmpty) {
+                    socket.emit('trigger_overlay_alert', {
+                      'room': room,
+                      'alertData': {'user': 'Teste HELL Live', 'message': 'enviou ${item['name']}!', 'gifUrl': item['gif'], 'duration': 5}
+                    });
+                    _showSnack('Alerta de teste enviado para o Overlay!');
+                  } else {
+                    _showSnack('Define primeiro o teu @utilizador TikTok no Início!');
+                  }
+                },
               ),
+              Switch(activeColor: Colors.white, activeTrackColor: const Color(0xFF1E78FF), value: item['enabled'], onChanged: (v) => setState(() => item['enabled'] = v)),
             ],
           ),
         );
@@ -555,15 +550,8 @@ class _MainShellState extends State<MainShell> {
       child: Column(
         children: [
           const TabBar(
-            indicatorColor: Color(0xFF38BDF8),
-            labelColor: Color(0xFF38BDF8),
-            unselectedLabelColor: Colors.white54,
-            tabs: [
-              Tab(text: 'Presentes'),
-              Tab(text: 'Seguidores'),
-              Tab(text: 'Gostos'),
-              Tab(text: 'Comentários'),
-            ],
+            indicatorColor: Color(0xFF38BDF8), labelColor: Color(0xFF38BDF8), unselectedLabelColor: Colors.white54,
+            tabs: [Tab(text: 'Presentes'), Tab(text: 'Seguidores'), Tab(text: 'Gostos'), Tab(text: 'Comentários')],
           ),
           Expanded(
             child: TabBarView(
@@ -581,13 +569,10 @@ class _MainShellState extends State<MainShell> {
               width: double.infinity,
               height: 50,
               child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1E78FF),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                 onPressed: _importSound,
                 icon: const Icon(Icons.add, color: Colors.white),
-                label: const Text('Adicionar Som Personalizado', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+                label: const Text('Adicionar Som Personalizado (.MP3)', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
               ),
             ),
           ),
@@ -597,9 +582,7 @@ class _MainShellState extends State<MainShell> {
   }
 
   Widget _buildCategorySounds(String tabCat) {
-    final list = tabCat == 'Todos'
-        ? _soundsLibrary
-        : _soundsLibrary.where((s) => s['cat'] == tabCat).toList();
+    final list = tabCat == 'Todos' ? _soundsLibrary : _soundsLibrary.where((s) => s['cat'] == tabCat).toList();
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: list.length,
@@ -613,13 +596,16 @@ class _MainShellState extends State<MainShell> {
             children: [
               GestureDetector(
                 onTap: () async {
+                  await sfxAudioPlayer.stop();
                   if (s['path']!.isNotEmpty) {
-                    await audioPlayer.play(DeviceFileSource(s['path']!));
-                  } else {
-                    flutterTts.speak('A reproduzir ${s['name']}');
+                    await sfxAudioPlayer.play(DeviceFileSource(s['path']!));
+                  } else if (s['url'] != null && s['url']!.isNotEmpty) {
+                    await sfxAudioPlayer.play(UrlSource(s['url']!));
+                    final room = _pairedRemoteRoom ?? _tiktokController.text.trim();
+                    if (room.isNotEmpty) socket.emit('remote_command', {'room': room, 'command': 'sound', 'payload': s['url']});
                   }
                 },
-                child: const Icon(Icons.play_arrow, color: Color(0xFF38BDF8), size: 30),
+                child: const Icon(Icons.play_arrow, color: Color(0xFF38BDF8), size: 32),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -631,7 +617,7 @@ class _MainShellState extends State<MainShell> {
                   ],
                 ),
               ),
-              const Icon(Icons.more_vert, color: Colors.white54),
+              const Icon(Icons.volume_up, color: Colors.white38, size: 18),
             ],
           ),
         );
@@ -648,12 +634,7 @@ class _MainShellState extends State<MainShell> {
             indicatorColor: Color(0xFF38BDF8),
             labelColor: Color(0xFF38BDF8),
             unselectedLabelColor: Colors.white54,
-            tabs: [
-              Tab(text: 'Todos'),
-              Tab(text: 'Presentes'),
-              Tab(text: 'Eventos'),
-              Tab(text: 'Meus Sons'),
-            ],
+            tabs: [Tab(text: 'Todos'), Tab(text: 'Presentes'), Tab(text: 'Eventos'), Tab(text: 'Meus Sons')],
           ),
           Expanded(
             child: TabBarView(
@@ -670,13 +651,11 @@ class _MainShellState extends State<MainShell> {
             child: SizedBox(
               width: double.infinity,
               height: 50,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1E78FF),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                 onPressed: _importSound,
-                child: const Text('Importar Som', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+                icon: const Icon(Icons.upload_file, color: Colors.white),
+                label: const Text('Importar Som (.MP3)', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
               ),
             ),
           ),
@@ -684,6 +663,7 @@ class _MainShellState extends State<MainShell> {
       ),
     );
   }
+
   Widget _buildCommentsTab() {
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -697,7 +677,7 @@ class _MainShellState extends State<MainShell> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Leitura por Voz', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const Text('Leitura por Voz Neural', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   Switch(
                     activeColor: Colors.white,
                     activeTrackColor: const Color(0xFF1E78FF),
@@ -713,54 +693,20 @@ class _MainShellState extends State<MainShell> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text('Ignorar mensagens só com emojis', style: TextStyle(fontSize: 13, color: Colors.white70)),
-                  Switch(
-                    activeColor: Colors.white,
-                    activeTrackColor: const Color(0xFF1E78FF),
-                    value: _ignoreEmojiOnly,
-                    onChanged: (v) => setState(() => _ignoreEmojiOnly = v),
-                  ),
+                  Switch(activeColor: Colors.white, activeTrackColor: const Color(0xFF1E78FF), value: _ignoreEmojiOnly, onChanged: (v) => setState(() => _ignoreEmojiOnly = v)),
                 ],
               ),
-              const SizedBox(height: 12),
-              const Text('Idioma', style: TextStyle(color: Colors.white70, fontSize: 13)),
+              const SizedBox(height: 14),
+              const Text('Voz Real (Masculina / Feminina)', style: TextStyle(color: Colors.white70, fontSize: 13)),
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
-                value: _selectedLanguage,
+                value: _selectedVoiceKey,
                 dropdownColor: const Color(0xFF0B1636),
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: const Color(0xFF050B1E),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                items: _supportedLanguages.entries
-                    .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
-                    .toList(),
+                decoration: InputDecoration(filled: true, fillColor: const Color(0xFF050B1E), border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
+                items: _neuralVoices.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value['label']!))).toList(),
                 onChanged: (v) async {
                   if (v != null) {
-                    setState(() => _selectedLanguage = v);
-                    await _applyTtsSettings();
-                    await _saveSettings();
-                  }
-                },
-              ),
-              const SizedBox(height: 16),
-              const Text('Timbre & Voz', style: TextStyle(color: Colors.white70, fontSize: 13)),
-              const SizedBox(height: 6),
-              DropdownButtonFormField<String>(
-                value: _selectedVoicePreset,
-                dropdownColor: const Color(0xFF0B1636),
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: const Color(0xFF050B1E),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                items: _voicePresets.keys
-                    .map((k) => DropdownMenuItem(value: k, child: Text(k)))
-                    .toList(),
-                onChanged: (v) async {
-                  if (v != null) {
-                    setState(() => _selectedVoicePreset = v);
-                    await _applyTtsSettings();
+                    setState(() => _selectedVoiceKey = v);
                     await _saveSettings();
                   }
                 },
@@ -781,41 +727,164 @@ class _MainShellState extends State<MainShell> {
                 divisions: 6,
                 onChanged: (v) async {
                   setState(() => _speechRate = v);
-                  await _applyTtsSettings();
                   await _saveSettings();
                 },
               ),
               const SizedBox(height: 12),
-              const Text('Exemplo de Leitura', style: TextStyle(color: Colors.white70, fontSize: 13)),
-              const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF050B1E),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.white12),
-                ),
+                decoration: BoxDecoration(color: const Color(0xFF050B1E), borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.white12)),
                 child: Row(
                   children: [
-                    const Expanded(
-                      child: Text(
-                        '"Obrigado pelo apoio!\nVamos com tudo!"',
-                        style: TextStyle(fontSize: 13, color: Colors.white70),
-                      ),
-                    ),
+                    const Expanded(child: Text('"Obrigado pelo apoio!\nVamos com tudo na live!"', style: TextStyle(fontSize: 13, color: Colors.white70))),
                     GestureDetector(
-                      onTap: () => flutterTts.speak('Obrigado pelo apoio! Vamos com tudo!'),
+                      onTap: () => _speakNeural('Obrigado pelo apoio! Vamos com tudo na live!'),
                       child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1E78FF),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(color: const Color(0xFF1E78FF), borderRadius: BorderRadius.circular(8)),
                         child: const Icon(Icons.play_arrow, color: Colors.white),
                       ),
                     ),
                   ],
                 ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+  Widget _buildPodiumTab() {
+    final medals = ['🥇', '🥈', '🥉'];
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: _neonCardDecoration(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('🏆 TOP PRESENTEADORES', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8))),
+              const SizedBox(height: 12),
+              if (_topGifts.isEmpty)
+                const Text('Ainda sem presentes nesta sessão.', style: TextStyle(color: Colors.white54))
+              else
+                ..._topGifts.take(5).toList().asMap().entries.map((e) => ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Text(e.key < 3 ? medals[e.key] : '#${e.key + 1}', style: const TextStyle(fontSize: 20)),
+                      title: Text(e.value['user'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      trailing: Text('${e.value['score']} pts', style: const TextStyle(color: Color(0xFF38BDF8), fontWeight: FontWeight.bold)),
+                    )),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: _neonCardDecoration(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('❤️ TOP LIKES DA LIVE', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFFF43F5E))),
+              const SizedBox(height: 12),
+              if (_topLikes.isEmpty)
+                const Text('Ainda sem likes registados.', style: TextStyle(color: Colors.white54))
+              else
+                ..._topLikes.take(5).toList().asMap().entries.map((e) => ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Text(e.key < 3 ? medals[e.key] : '#${e.key + 1}', style: const TextStyle(fontSize: 20)),
+                      title: Text(e.value['user'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      trailing: Text('${e.value['score']} likes', style: const TextStyle(color: Color(0xFFF43F5E), fontWeight: FontWeight.bold)),
+                    )),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOverlaysAndDonationsTab() {
+    final cleanRoom = (_tiktokController.text.trim().isEmpty ? 'teu_canal' : _tiktokController.text.trim()).toLowerCase().replaceAll('@', '');
+    final overlayUrl = '$serverUrl/overlay/$cleanRoom';
+    final donateUrl = '$serverUrl/doar/$cleanRoom';
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: _neonCardDecoration(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('📺 Overlay Transparente (OBS / Live Studio)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8))),
+              const SizedBox(height: 8),
+              const Text('Cola este link como Fonte de Navegador (Browser Source) na tua live para mostrar GIFs, Pódio e Meta:', style: TextStyle(fontSize: 13, color: Colors.white70)),
+              const SizedBox(height: 10),
+              SelectableText(overlayUrl, style: const TextStyle(fontSize: 12, color: Colors.cyanAccent)),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF)),
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: overlayUrl));
+                    _showSnack('Link do Overlay copiado!');
+                  },
+                  icon: const Icon(Icons.copy, color: Colors.white),
+                  label: const Text('Copiar Link do Overlay', style: TextStyle(color: Colors.white)),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: _neonCardDecoration(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('💸 Doações Diretas (MB Way / PIX)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8))),
+              const SizedBox(height: 10),
+              TextField(controller: _mbwayController, decoration: const InputDecoration(labelText: 'Número MB Way (Portugal)', prefixIcon: Icon(Icons.phone_android))),
+              const SizedBox(height: 10),
+              TextField(controller: _pixController, decoration: const InputDecoration(labelText: 'Chave PIX (Brasil)', prefixIcon: Icon(Icons.pix))),
+              const SizedBox(height: 10),
+              TextField(controller: _donationImgController, decoration: const InputDecoration(labelText: 'Link da Imagem / GIF da Página', prefixIcon: Icon(Icons.image))),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF)),
+                      onPressed: () {
+                        _saveSettings();
+                        socket.emit('update_donation_config', {
+                          'room': cleanRoom,
+                          'config': {
+                            'mbway': _mbwayController.text.trim(),
+                            'pix': _pixController.text.trim(),
+                            'imageUrl': _donationImgController.text.trim(),
+                          }
+                        });
+                        _showSnack('Cartão de doações guardado!');
+                      },
+                      child: const Text('Guardar', style: TextStyle(color: Colors.white)),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: donateUrl));
+                        _showSnack('Link de Doação copiado!');
+                      },
+                      child: const Text('Copiar Link'),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -834,95 +903,50 @@ class _MainShellState extends State<MainShell> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Padding(
-                padding: EdgeInsets.only(left: 12, top: 4, bottom: 4),
-                child: Text('Tema', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-              ),
-              RadioListTile<String>(
-                activeColor: const Color(0xFF38BDF8),
-                title: const Text('Azul (Padrão)'),
-                value: 'azul',
-                groupValue: widget.currentTheme,
-                onChanged: (v) => widget.onThemeChanged(v!),
-              ),
-              RadioListTile<String>(
-                activeColor: const Color(0xFF38BDF8),
-                title: const Text('Escuro'),
-                value: 'escuro',
-                groupValue: widget.currentTheme,
-                onChanged: (v) => widget.onThemeChanged(v!),
-              ),
-              RadioListTile<String>(
-                activeColor: const Color(0xFF38BDF8),
-                title: const Text('Claro'),
-                value: 'claro',
-                groupValue: widget.currentTheme,
-                onChanged: (v) => widget.onThemeChanged(v!),
-              ),
+              const Padding(padding: EdgeInsets.only(left: 12, top: 4, bottom: 4), child: Text('Tema', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold))),
+              RadioListTile<String>(activeColor: const Color(0xFF38BDF8), title: const Text('Azul (Padrão)'), value: 'azul', groupValue: widget.currentTheme, onChanged: (v) => widget.onThemeChanged(v!)),
+              RadioListTile<String>(activeColor: const Color(0xFF38BDF8), title: const Text('Escuro'), value: 'escuro', groupValue: widget.currentTheme, onChanged: (v) => widget.onThemeChanged(v!)),
+              RadioListTile<String>(activeColor: const Color(0xFF38BDF8), title: const Text('Claro'), value: 'claro', groupValue: widget.currentTheme, onChanged: (v) => widget.onThemeChanged(v!)),
             ],
           ),
         ),
         const SizedBox(height: 12),
-        _neonMenuTile(
-          Icons.music_note,
-          _tiktokController.text.isEmpty ? 'Conta TikTok (Ligação pendente)' : 'Conta TikTok (${_tiktokController.text})',
-          _connectTikTokDialog,
-        ),
-        _neonMenuTile(Icons.workspace_premium, 'HELL Live PRO & Vouchers de Oferta', () => _showSnack('Loja PRO & Vouchers de 1, 3, 6 e 12 meses chegam na v3.0!')),
-        _neonMenuTile(Icons.info_outline, 'Sobre a Aplicação (HELL Live v1.5.0)', () => _showSnack('HELL Live · LIVE · PLAY · CONNECT')),
+        _neonMenuTile(Icons.music_note, _tiktokController.text.isEmpty ? 'Conta TikTok (Ligação pendente)' : 'Conta TikTok (${_tiktokController.text})', _connectTikTokDialog),
+        _neonMenuTile(Icons.qr_code_2, 'Emparelhar Telemóvel / Tablet (Stream Deck)', _openPairDialog),
+        _neonMenuTile(Icons.workspace_premium, 'HELL Live PRO & Vouchers de Oferta', () => _showSnack('Loja PRO & Vouchers chegam na v3.0!')),
+        _neonMenuTile(Icons.info_outline, 'Sobre a Aplicação (HELL Live v2.0.0)', () => _showSnack('HELL Live · LIVE · PLAY · CONNECT')),
       ],
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final titles = ['HELL Live', 'Alertas', 'Sons', 'Comentários', 'Definições'];
+    final titles = ['HELL Live', 'Alertas', 'Sons & Deck', 'Vozes Neurais', 'Definições', 'Pódio ao Vivo', 'Overlays & Doações'];
     final screens = [
       _buildHomeTab(),
       _buildAlertsTab(),
       _buildSoundsTab(),
       _buildCommentsTab(),
       _buildSettingsTab(),
+      _buildPodiumTab(),
+      _buildOverlaysAndDonationsTab(),
     ];
 
     return Scaffold(
       appBar: AppBar(
         leading: _selectedIndex == 0
-            ? Padding(
-                padding: const EdgeInsets.all(10.0),
-                child: Image.asset('icon.png', errorBuilder: (_, __, ___) => const Icon(Icons.shield, color: Color(0xFF38BDF8))),
-              )
-            : IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () => setState(() => _selectedIndex = 0),
-              ),
-        title: Text(
-          titles[_selectedIndex],
-          style: const TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.2),
-        ),
+            ? Padding(padding: const EdgeInsets.all(10.0), child: Image.asset('icon.png', errorBuilder: (_, __, ___) => const Icon(Icons.shield, color: Color(0xFF38BDF8))))
+            : IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => setState(() => _selectedIndex = 0)),
+        title: Text(titles[_selectedIndex], style: const TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.2)),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.volume_off, color: Colors.redAccent),
-            tooltip: 'Botão de Pânico (Silenciar Tudo)',
-            onPressed: _panicSilenceAll,
-          ),
-          if (_selectedIndex == 0)
-            IconButton(
-              icon: const Icon(Icons.settings_outlined, color: Colors.white70),
-              onPressed: () => setState(() => _selectedIndex = 4),
-            ),
+          IconButton(icon: const Icon(Icons.volume_off, color: Colors.redAccent), tooltip: 'Silenciar Tudo', onPressed: _panicSilenceAll),
+          if (_selectedIndex == 0) IconButton(icon: const Icon(Icons.settings_outlined, color: Colors.white70), onPressed: () => setState(() => _selectedIndex = 4)),
         ],
       ),
       body: screens[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex == 4 ? 3 : _selectedIndex,
-        onTap: (idx) {
-          if (idx == 3) {
-            setState(() => _selectedIndex = 4);
-          } else {
-            setState(() => _selectedIndex = idx);
-          }
-        },
+        currentIndex: _selectedIndex > 3 ? 3 : _selectedIndex,
+        onTap: (idx) => setState(() => _selectedIndex = idx == 3 ? 4 : idx),
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Início'),
           BottomNavigationBarItem(icon: Icon(Icons.notifications_none), activeIcon: Icon(Icons.notifications), label: 'Alertas'),
