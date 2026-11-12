@@ -6,8 +6,8 @@ class AppTranslations {
         'comments': 'Comentários & Vozes',
         'podium': 'Pódio Oficial',
         'interaction': 'Interação & Roleta',
-        'studio': 'Estúdio de Overlays',
-        'stream_deck': 'Stream Deck (15 Botões)',
+        'studio': 'Estúdio & Marketplace',
+        'stream_deck': 'Stream Deck Pro',
         'community': 'Comunidade Ao Vivo',
         'about': 'Quem Somos Nós',
         'settings': 'Definições & Idioma',
@@ -17,8 +17,8 @@ class AppTranslations {
         'comments': 'Comments & Voices',
         'podium': 'Official Podium',
         'interaction': 'Interaction & Wheel',
-        'studio': 'Overlay Studio',
-        'stream_deck': 'Stream Deck (15 Buttons)',
+        'studio': 'Studio & Marketplace',
+        'stream_deck': 'Stream Deck Pro',
         'community': 'Live Community',
         'about': 'About Us',
         'settings': 'Settings & Language',
@@ -28,8 +28,8 @@ class AppTranslations {
         'comments': 'Comentarios y Voces',
         'podium': 'Podio Oficial',
         'interaction': 'Interacción y Ruleta',
-        'studio': 'Estudio de Overlays',
-        'stream_deck': 'Stream Deck (15 Botones)',
+        'studio': 'Estudio y Marketplace',
+        'stream_deck': 'Stream Deck Pro',
         'community': 'Comunidad en Vivo',
         'about': 'Quiénes Somos',
         'settings': 'Ajustes e Idioma',
@@ -52,14 +52,14 @@ class DefaultMediaLibrary {
   ];
 
   static final List<Map<String, String>> builtInSounds = [
-    {'name': 'Aplausos Plateia', 'cat': 'Eventos', 'url': 'https://google.com'},
-    {'name': 'Moeda / Vitória', 'cat': 'Presentes', 'url': 'https://google.com'},
-    {'name': 'Buzina Épica', 'cat': 'Eventos', 'url': 'https://google.com'},
-    {'name': 'Sino de Alerta', 'cat': 'Presentes', 'url': 'https://google.com'},
-    {'name': 'Tambor Suspense', 'cat': 'Eventos', 'url': 'https://google.com'},
-    {'name': 'Foguetes Festa', 'cat': 'Presentes', 'url': 'https://google.com'},
-    {'name': 'Laser Sci-Fi', 'cat': 'Gaming', 'url': 'https://google.com'},
-    {'name': 'Level Up / Power', 'cat': 'Gaming', 'url': 'https://google.com'},
+    {'name': 'Aplausos Plateia', 'url': 'https://google.com'},
+    {'name': 'Moeda / Vitória', 'url': 'https://google.com'},
+    {'name': 'Buzina Épica', 'url': 'https://google.com'},
+    {'name': 'Sino de Alerta', 'url': 'https://google.com'},
+    {'name': 'Tambor Suspense', 'url': 'https://google.com'},
+    {'name': 'Foguetes Festa', 'url': 'https://google.com'},
+    {'name': 'Laser Sci-Fi', 'url': 'https://google.com'},
+    {'name': 'Level Up / Power', 'url': 'https://google.com'},
   ];
 
   static final List<Map<String, String>> builtInGifs = [
@@ -71,6 +71,24 @@ class DefaultMediaLibrary {
     {'name': 'Novo Seguidor', 'url': 'https://giphy.com'},
     {'name': 'Coração Explodir', 'url': 'https://giphy.com'},
     {'name': 'Fogo Azul', 'url': 'https://giphy.com'},
+  ];
+
+  static final List<Map<String, dynamic>> wheelTemplates = [
+    {
+      'name': 'Desafios Gaming Pro',
+      'theme': 'neon',
+      'items': ['10 Flexões', 'Sem Mira 1 Ronda', 'Só Pistola', 'Jogar Invertido', 'Sensibilidade Máxima', 'Vitória Obrigatória']
+    },
+    {
+      'name': 'Interação com o Chat',
+      'theme': 'fire',
+      'items': ['Escolher Música', 'Salve Especial', 'Seguir de Volta', 'Mod por 10 Min', 'Responder Verdade', 'Dupla na Próxima']
+    },
+    {
+      'name': 'Prémios & Sorteios',
+      'theme': 'toxic',
+      'items': ['VIP no Canal', 'Destaque na Live', 'Escolha o Jogo', 'Desafio Surpresa', 'Roda Novamente', 'Grande Prémio!']
+    },
   ];
 
   static final List<Map<String, String>> overlayPresets = [
