@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,6 +12,7 @@ import 'package:http/http.dart' as http;
 import 'app_data.dart';
 import 'studio_screens.dart';
 import 'deck_and_community.dart';
+import 'platform_logos.dart';
 
 void main() {
   runApp(const HellLiveApp());
@@ -38,12 +41,6 @@ class _HellLiveAppState extends State<HellLiveApp> {
         cardColor: const Color(0xFF10131C),
         primaryColor: const Color(0xFF2563EB),
         appBarTheme: const AppBarTheme(backgroundColor: Color(0xFF07090E), elevation: 0),
-        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-          backgroundColor: Color(0xFF0A0D14),
-          selectedItemColor: Color(0xFF38BDF8),
-          unselectedItemColor: Colors.white38,
-          type: BottomNavigationBarType.fixed,
-        ),
       );
     }
     return ThemeData.dark().copyWith(
@@ -51,12 +48,6 @@ class _HellLiveAppState extends State<HellLiveApp> {
       cardColor: const Color(0xFF0B1636),
       primaryColor: const Color(0xFF1E78FF),
       appBarTheme: const AppBarTheme(backgroundColor: Color(0xFF050B1E), elevation: 0),
-      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        backgroundColor: Color(0xFF07102B),
-        selectedItemColor: Color(0xFF38BDF8),
-        unselectedItemColor: Colors.white54,
-        type: BottomNavigationBarType.fixed,
-      ),
       colorScheme: const ColorScheme.dark(primary: Color(0xFF1E78FF), secondary: Color(0xFF38BDF8)),
     );
   }
@@ -95,12 +86,12 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 2600));
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 2400));
     _logoScale = Tween<double>(begin: 0.78, end: 1.0).animate(CurvedAnimation(parent: _controller, curve: const Interval(0.0, 0.45, curve: Curves.easeOutBack)));
     _logoOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _controller, curve: const Interval(0.0, 0.30, curve: Curves.easeIn)));
     _glowRadius = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 12.0, end: 52.0), weight: 50),
-      TweenSequenceItem(tween: Tween(begin: 52.0, end: 32.0), weight: 50),
+      TweenSequenceItem(tween: Tween(begin: 12.0, end: 50.0), weight: 50),
+      TweenSequenceItem(tween: Tween(begin: 50.0, end: 30.0), weight: 50),
     ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
     _ringScale = Tween<double>(begin: 0.7, end: 1.45).animate(CurvedAnimation(parent: _controller, curve: const Interval(0.15, 0.75, curve: Curves.easeOut)));
     _ringOpacity = TweenSequence<double>([
@@ -113,11 +104,11 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     _progressWidth = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _controller, curve: const Interval(0.20, 0.95, curve: Curves.easeInOut)));
     _controller.forward();
 
-    Timer(const Duration(milliseconds: 3000), () {
+    Timer(const Duration(milliseconds: 2700), () {
       if (mounted) {
         Navigator.of(context).pushReplacement(
           PageRouteBuilder(
-            transitionDuration: const Duration(milliseconds: 600),
+            transitionDuration: const Duration(milliseconds: 500),
             pageBuilder: (_, __, ___) => MainShell(currentTheme: widget.currentTheme, onThemeChanged: widget.onThemeChanged),
             transitionsBuilder: (_, anim, __, child) => FadeTransition(opacity: anim, child: child),
           ),
@@ -167,10 +158,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                           height: 132,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(color: const Color(0xFF1E78FF).withOpacity(0.55), blurRadius: _glowRadius.value, spreadRadius: 4),
-                              BoxShadow(color: const Color(0xFF38BDF8).withOpacity(0.25), blurRadius: _glowRadius.value * 1.4, spreadRadius: 1),
-                            ],
+                            boxShadow: [BoxShadow(color: const Color(0xFF1E78FF).withOpacity(0.55), blurRadius: _glowRadius.value, spreadRadius: 4)],
                           ),
                           child: Image.asset('icon.png', fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.local_fire_department, size: 95, color: Color(0xFF38BDF8))),
                         ),
@@ -219,7 +207,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                             decoration: BoxDecoration(
                               gradient: const LinearGradient(colors: [Color(0xFF1E78FF), Color(0xFF38BDF8)]),
                               borderRadius: BorderRadius.circular(4),
-                              boxShadow: const [BoxShadow(color: Color(0xFF38BDF8), blurRadius: 6)],
                             ),
                           ),
                         ),
@@ -228,6 +215,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   ),
                 ),
                 const SizedBox(height: 42),
+              ],
               ],
             );
           },
@@ -256,10 +244,15 @@ class _MainShellState extends State<MainShell> {
 
   final TextEditingController _channelCtrl = TextEditingController();
   final TextEditingController _gifSearchCtrl = TextEditingController();
-  String _selectedPlatform = 'tiktok';
+  final TextEditingController _goalTitleCtrl = TextEditingController(text: 'Meta de Likes da Live');
+  final TextEditingController _goalTargetCtrl = TextEditingController(text: '5000');
+  final TextEditingController _mbwayCtrl = TextEditingController();
+  final TextEditingController _pixCtrl = TextEditingController();
 
+  String _selectedPlatform = 'tiktok';
   bool _isConnectedToServer = false;
   bool _liveConnected = false;
+  bool _isMuted = false;
   bool _ttsEnabled = true;
   bool _ignoreEmojiOnly = true;
   String? _generatedPairCode;
@@ -269,29 +262,30 @@ class _MainShellState extends State<MainShell> {
   double _speechRate = 0.5;
 
   final Map<String, Map<String, String>> _neuralVoices = {
-    'pt-PT-DuarteNeural': {'label': 'Masculina PT-PT (Duarte)', 'pitch': '+0Hz'},
-    'pt-PT-DuarteNeural|grave': {'label': 'Masculina PT-PT Grave (Locutor)', 'pitch': '-15Hz'},
-    'pt-PT-RaquelNeural': {'label': 'Feminina PT-PT (Raquel)', 'pitch': '+0Hz'},
-    'pt-PT-RaquelNeural|aguda': {'label': 'Feminina PT-PT Energética', 'pitch': '+12Hz'},
-    'pt-BR-AntonioNeural': {'label': 'Masculina PT-BR (António)', 'pitch': '+0Hz'},
-    'pt-BR-FranciscaNeural': {'label': 'Feminina PT-BR (Francisca)', 'pitch': '+0Hz'},
-    'en-US-GuyNeural': {'label': 'Masculina Inglês (Guy)', 'pitch': '+0Hz'},
-    'en-US-JennyNeural': {'label': 'Feminina Inglês (Jenny)', 'pitch': '+0Hz'},
-    'es-ES-AlvaroNeural': {'label': 'Masculina Espanhol (Álvaro)', 'pitch': '+0Hz'},
+    'pt-PT-DuarteNeural': {'label': 'Masculina PT-PT (Duarte)', 'pitch': '+0Hz', 'gender': 'male'},
+    'pt-PT-DuarteNeural|grave': {'label': 'Masculina PT-PT Grave (Locutor)', 'pitch': '-18Hz', 'gender': 'male'},
+    'pt-PT-RaquelNeural': {'label': 'Feminina PT-PT (Raquel)', 'pitch': '+0Hz', 'gender': 'female'},
+    'pt-PT-RaquelNeural|aguda': {'label': 'Feminina PT-PT Energética', 'pitch': '+14Hz', 'gender': 'female'},
+    'pt-BR-AntonioNeural': {'label': 'Masculina PT-BR (António)', 'pitch': '+0Hz', 'gender': 'male'},
+    'pt-BR-FranciscaNeural': {'label': 'Feminina PT-BR (Francisca)', 'pitch': '+0Hz', 'gender': 'female'},
+    'en-US-GuyNeural': {'label': 'Masculina Inglês (Guy)', 'pitch': '+0Hz', 'gender': 'male'},
+    'en-US-JennyNeural': {'label': 'Feminina Inglês (Jenny)', 'pitch': '+0Hz', 'gender': 'female'},
+    'es-ES-AlvaroNeural': {'label': 'Masculina Espanhol (Álvaro)', 'pitch': '+0Hz', 'gender': 'male'},
   };
 
   List<Map<String, dynamic>> _topGifts = [];
   List<Map<String, dynamic>> _topLikes = [];
+  final List<Map<String, String>> _chatFeed = [];
   List<Map<String, String>> _sounds = [];
   List<Map<String, String>> _gifs = [];
   List<dynamic> _onlineGifResults = [];
   bool _searchingGifs = false;
 
-  final List<Map<String, dynamic>> _alertRules = [
-    {'name': 'Presente / Moeda', 'gif': 'https://giphy.com', 'enabled': true, 'icon': Icons.card_giftcard, 'color': const Color(0xFFFBBF24)},
-    {'name': 'Novo Seguidor', 'gif': 'https://giphy.com', 'enabled': true, 'icon': Icons.person_add, 'color': const Color(0xFF38BDF8)},
-    {'name': 'Meta 500 Likes (Com Foto)', 'gif': 'https://giphy.com', 'enabled': true, 'icon': Icons.favorite, 'color': const Color(0xFFF43F5E)},
-  ];
+  String _followerGif = 'https://giphy.com';
+  String _likeMilestoneGif = 'https://giphy.com';
+  String _donationImageBase64OrUrl = 'https://giphy.com';
+  String _donationFileLabel = 'Imagem padrão';
+
   @override
   void initState() {
     super.initState();
@@ -325,10 +319,14 @@ class _MainShellState extends State<MainShell> {
   }
 
   Future<void> _speakNeural(String text) async {
+    if (_isMuted) return;
+    final info = _neuralVoices[_selectedVoiceKey]!;
+    final voiceName = _selectedVoiceKey.split('|').first;
+    final pitch = info['pitch'] ?? '+0Hz';
+    final isMale = info['gender'] == 'male';
+    final ratePct = '${((_speechRate - 0.5) * 100).round() >= 0 ? "+" : ""}${((_speechRate - 0.5) * 100).round()}%';
+
     try {
-      final voiceName = _selectedVoiceKey.split('|').first;
-      final pitch = _neuralVoices[_selectedVoiceKey]?['pitch'] ?? '+0Hz';
-      final ratePct = '${((_speechRate - 0.5) * 100).round() >= 0 ? "+" : ""}${((_speechRate - 0.5) * 100).round()}%';
       final uri = Uri.parse('$serverUrl/tts').replace(queryParameters: {
         'text': text,
         'voice': voiceName,
@@ -336,17 +334,26 @@ class _MainShellState extends State<MainShell> {
         'pitch': pitch,
       });
       await ttsAudioPlayer.stop();
-      await ttsAudioPlayer.play(UrlSource(uri.toString()));
+      await ttsAudioPlayer.play(UrlSource(uri.toString())).timeout(const Duration(seconds: 6));
     } catch (_) {
+      // Se o servidor estiver a acordar, ajusta o tom do motor local para masculino/feminino real
+      await flutterTts.setLanguage(voiceName.startsWith('pt-BR') ? 'pt-BR' : (voiceName.startsWith('en') ? 'en-US' : 'pt-PT'));
+      await flutterTts.setPitch(isMale ? 0.62 : 1.18);
+      await flutterTts.setSpeechRate(_speechRate);
       await flutterTts.speak(text);
     }
   }
 
-  Future<void> _panicSilenceAll() async {
-    await ttsAudioPlayer.stop();
-    await sfxAudioPlayer.stop();
-    await flutterTts.stop();
-    _showSnack('Silêncio ativado!');
+  Future<void> _toggleMuteState() async {
+    setState(() => _isMuted = !_isMuted);
+    if (_isMuted) {
+      await ttsAudioPlayer.stop();
+      await sfxAudioPlayer.stop();
+      await flutterTts.stop();
+      _showSnack('Som e alertas cortados!');
+    } else {
+      _showSnack('Som e alertas ativos!');
+    }
   }
 
   void _initSocket() {
@@ -375,7 +382,7 @@ class _MainShellState extends State<MainShell> {
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
-          backgroundColor: const Color(0xFF0B1636),
+          backgroundColor: Theme.of(context).cardColor,
           title: const Text('Pedido de Emparelhamento'),
           content: Text('Aceitar ligação de "${data['deviceName']}"?'),
           actions: [
@@ -398,8 +405,8 @@ class _MainShellState extends State<MainShell> {
       _showSnack('Emparelhado com sucesso!');
     });
     socket.on('execute_remote_command', (data) {
-      if (data['command'] == 'panic') _panicSilenceAll();
-      if (data['command'] == 'sound' && data['payload'] != null) {
+      if (data['command'] == 'toggle_mute' || data['command'] == 'panic') _toggleMuteState();
+      if (!_isMuted && data['command'] == 'sound' && data['payload'] != null) {
         sfxAudioPlayer.play(UrlSource(data['payload']));
       }
     });
@@ -407,16 +414,29 @@ class _MainShellState extends State<MainShell> {
       final event = Map<String, dynamic>.from(data);
       final user = event['user'] ?? 'Alguém';
       final msg = (event['message'] ?? '').toString();
+
+      setState(() {
+        _chatFeed.insert(0, {'user': user, 'msg': msg, 'type': event['type'] ?? 'chat'});
+        if (_chatFeed.length > 40) _chatFeed.removeLast();
+      });
+
+      if (_isMuted) return;
+
       if (event['type'] == 'gift') {
         final room = _channelCtrl.text.trim();
-        final rule = _alertRules.first;
+        final giftName = (event['giftName'] ?? '').toString().toLowerCase();
+        final match = DefaultMediaLibrary.tiktokGiftsCatalog.firstWhere(
+          (g) => giftName.contains(g['name'].toString().split(' ').first.toLowerCase()),
+          orElse: () => DefaultMediaLibrary.tiktokGiftsCatalog.first,
+        );
         if (room.isNotEmpty) {
           socket.emit('trigger_overlay_alert', {
             'room': room,
-            'alertData': {'user': '$user $msg', 'message': '', 'gifUrl': rule['gif'], 'duration': 5}
+            'alertData': {'user': '$user $msg', 'message': '', 'gifUrl': match['gif'], 'soundUrl': match['sound'], 'duration': 5}
           });
         }
       }
+
       if (_ttsEnabled) {
         if (_ignoreEmojiOnly && event['type'] != 'gift' && !RegExp(r'[a-zA-Z0-9À-ÿ]').hasMatch(msg)) return;
         _speakNeural(event['type'] == 'gift' ? 'Novo presente! $user $msg' : '$user diz: $msg');
@@ -429,80 +449,43 @@ class _MainShellState extends State<MainShell> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text), behavior: SnackBarBehavior.floating));
   }
-  void _openMultiPlatformDialog() {
+  void _openSinglePlatformDialog(String platformId, String platformName) {
+    setState(() => _selectedPlatform = platformId);
     showDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) {
-          final platforms = [
-            {'id': 'tiktok', 'name': 'TikTok', 'icon': Icons.music_note, 'color': const Color(0xFF22D3EE)},
-            {'id': 'twitch', 'name': 'Twitch', 'icon': Icons.videogame_asset, 'color': const Color(0xFFA855F7)},
-            {'id': 'youtube', 'name': 'YouTube', 'icon': Icons.play_circle_fill, 'color': const Color(0xFFEF4444)},
-            {'id': 'kick', 'name': 'Kick', 'icon': Icons.bolt, 'color': const Color(0xFF22C55E)},
-          ];
-          return AlertDialog(
-            backgroundColor: const Color(0xFF0B1636),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: const BorderSide(color: Color(0xFF1E78FF))),
-            title: const Text('Escolher Plataforma'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                GridView.count(
-                  shrinkWrap: true,
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 10,
-                  crossAxisSpacing: 10,
-                  childAspectRatio: 2.1,
-                  children: platforms.map((p) {
-                    final selected = _selectedPlatform == p['id'];
-                    return InkWell(
-                      onTap: () => setDialogState(() => _selectedPlatform = p['id'] as String),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: selected ? (p['color'] as Color).withOpacity(0.25) : const Color(0xFF050B1E),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: selected ? (p['color'] as Color) : Colors.white24, width: 1.5),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(p['icon'] as IconData, color: p['color'] as Color, size: 20),
-                            const SizedBox(width: 6),
-                            Text(p['name'] as String, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                          ],
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 14),
-                TextField(
-                  controller: _channelCtrl,
-                  decoration: InputDecoration(
-                    labelText: 'Canal / Utilizador (${_selectedPlatform.toUpperCase()})',
-                    prefixIcon: const Icon(Icons.alternate_email),
-                    border: const OutlineInputBorder(),
-                  ),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF)),
-                onPressed: () async {
-                  await _saveSettings();
-                  final user = _channelCtrl.text.trim();
-                  if (user.isNotEmpty) {
-                    socket.emit('connect_platform', {'platform': _selectedPlatform, 'username': user});
-                  }
-                  if (mounted) Navigator.pop(ctx);
-                },
-                child: const Text('Ligar Agora', style: TextStyle(color: Colors.white)),
-              ),
-            ],
-          );
-        },
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(context).cardColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: const BorderSide(color: Color(0xFF1E78FF))),
+        title: Row(
+          children: [
+            PlatformBrandLogo(platform: platformId, size: 22),
+            const SizedBox(width: 10),
+            Text('Ligar ao $platformName'),
+          ],
+        ),
+        content: TextField(
+          controller: _channelCtrl,
+          decoration: InputDecoration(
+            labelText: 'Nome de utilizador / Canal ($platformName)',
+            prefixIcon: const Icon(Icons.alternate_email),
+            border: const OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF)),
+            onPressed: () async {
+              await _saveSettings();
+              final user = _channelCtrl.text.trim();
+              if (user.isNotEmpty) {
+                socket.emit('connect_platform', {'platform': platformId, 'username': user});
+              }
+              if (mounted) Navigator.pop(ctx);
+            },
+            child: const Text('Conectar', style: TextStyle(color: Colors.white)),
+          ),
+        ],
       ),
     );
   }
@@ -526,7 +509,20 @@ class _MainShellState extends State<MainShell> {
       setState(() {
         _sounds.insert(0, {'name': result.files.single.name, 'cat': 'Meus Sons', 'url': '', 'path': result.files.single.path!});
       });
-      _showSnack('Som adicionado!');
+      _showSnack('Som adicionado à biblioteca!');
+    }
+  }
+
+  Future<void> _pickLocalDonationImage() async {
+    final res = await FilePicker.platform.pickFiles(type: FileType.image);
+    if (res != null && res.files.single.path != null) {
+      final bytes = await File(res.files.single.path!).readAsBytes();
+      final ext = (res.files.single.extension ?? 'png').toLowerCase();
+      final mime = ext == 'gif' ? 'image/gif' : 'image/png';
+      setState(() {
+        _donationImageBase64OrUrl = 'data:$mime;base64,${base64Encode(bytes)}';
+        _donationFileLabel = res.files.single.name;
+      });
     }
   }
 
@@ -563,160 +559,233 @@ class _MainShellState extends State<MainShell> {
   }
 
   Widget _buildHomeTab() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        GestureDetector(
-          onTap: _openMultiPlatformDialog,
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: _neonCard(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.circle, size: 12, color: _liveConnected ? Colors.greenAccent : (_isConnectedToServer ? Colors.orangeAccent : Colors.redAccent)),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _liveConnected ? 'Ao Vivo (${_selectedPlatform.toUpperCase()}: ${_channelCtrl.text})' : AppTranslations.t(_appLang, 'tap_connect'),
-                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    const Icon(Icons.grid_view_rounded, color: Color(0xFF38BDF8)),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: const [
-                    Chip(label: Text('TikTok', style: TextStyle(fontSize: 11))),
-                    Chip(label: Text('Twitch', style: TextStyle(fontSize: 11))),
-                    Chip(label: Text('YouTube', style: TextStyle(fontSize: 11))),
-                    Chip(label: Text('Kick', style: TextStyle(fontSize: 11))),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        _menuTile(Icons.notifications_active, AppTranslations.t(_appLang, 'alerts'), () => setState(() => _selectedIndex = 1)),
-        _menuTile(Icons.library_music, AppTranslations.t(_appLang, 'sounds'), () => setState(() => _selectedIndex = 2)),
-        _menuTile(Icons.record_voice_over, AppTranslations.t(_appLang, 'voices'), () => setState(() => _selectedIndex = 3)),
-        _menuTile(Icons.emoji_events, AppTranslations.t(_appLang, 'podium_wheel'), () => setState(() => _selectedIndex = 5), badge: 'NOVO'),
-        _menuTile(Icons.live_tv, AppTranslations.t(_appLang, 'studio'), () => setState(() => _selectedIndex = 6), badge: 'OBS / MBWay'),
-        _menuTile(Icons.grid_on, AppTranslations.t(_appLang, 'stream_deck'), () => setState(() => _selectedIndex = 7)),
-        _menuTile(Icons.public, AppTranslations.t(_appLang, 'community'), () => setState(() => _selectedIndex = 8), badge: 'MUNDO'),
-        _menuTile(Icons.info_outline, AppTranslations.t(_appLang, 'about'), () => setState(() => _selectedIndex = 9)),
-      ],
-    );
-  }
-  Widget _buildAlertsTab() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        ..._alertRules.map((rule) => Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.all(14),
-              decoration: _neonCard(),
-              child: Row(
-                children: [
-                  Icon(rule['icon'], color: rule['color'], size: 28),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(rule['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                        Text('GIF ativo configurado', style: const TextStyle(fontSize: 12, color: Colors.white54)),
-                      ],
-                    ),
-                  ),
-                  Switch(
-                    activeColor: Colors.white,
-                    activeTrackColor: const Color(0xFF1E78FF),
-                    value: rule['enabled'],
-                    onChanged: (v) => setState(() => rule['enabled'] = v),
-                  ),
-                ],
-              ),
-            )),
-        const SizedBox(height: 10),
-        ElevatedButton.icon(
-          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF), padding: const EdgeInsets.symmetric(vertical: 14)),
-          onPressed: () {
-            final room = _channelCtrl.text.trim();
-            if (room.isEmpty) {
-              _showSnack('Liga primeiro a tua live no Início!');
-              return;
-            }
-            socket.emit('trigger_overlay_alert', {
-              'room': room,
-              'alertData': {'user': 'Teste HELL Live', 'message': 'Alerta funcionando na tela!', 'gifUrl': _alertRules.first['gif'], 'duration': 5}
-            });
-            _showSnack('Alerta de teste enviado para o Estúdio!');
-          },
-          icon: const Icon(Icons.play_arrow, color: Colors.white),
-          label: const Text('Testar Alerta na Live (OBS / Live Studio)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        ),
-      ],
-    );
-  }
+    final platforms = [
+      {'id': 'tiktok', 'name': 'TikTok'},
+      {'id': 'twitch', 'name': 'Twitch'},
+      {'id': 'youtube', 'name': 'YouTube'},
+      {'id': 'kick', 'name': 'Kick'},
+    ];
 
-  Widget _buildSoundsAndGifsTab() {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Row(
+          children: [
+            Icon(Icons.circle, size: 10, color: _liveConnected ? Colors.greenAccent : (_isConnectedToServer ? Colors.orangeAccent : Colors.redAccent)),
+            const SizedBox(width: 8),
+            Text(
+              _liveConnected ? 'Em Direto: ${_selectedPlatform.toUpperCase()} (${_channelCtrl.text})' : 'Toca numa plataforma para ligar a tua live:',
+              style: const TextStyle(fontSize: 12.5, color: Colors.white70, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: 4,
+          crossAxisSpacing: 8,
+          mainAxisSpacing: 8,
+          childAspectRatio: 0.92,
+          children: platforms.map((p) {
+            final id = p['id']!;
+            final name = p['name']!;
+            final isActive = _liveConnected && _selectedPlatform == id;
+            return InkWell(
+              onTap: () => _openSinglePlatformDialog(id, name),
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [Color(0xFF0E1D47), Color(0xFF08112B)]),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: isActive ? Colors.greenAccent : const Color(0xFF1E429F), width: isActive ? 2 : 1.2),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    PlatformBrandLogo(platform: id, size: 26),
+                    const SizedBox(height: 6),
+                    Text(name, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 14),
+        _menuTile(Icons.notifications_active_outlined, AppTranslations.t(_appLang, 'alerts'), () => setState(() => _selectedIndex = 1), badge: 'TIKFINITY'),
+        _menuTile(Icons.chat_bubble_outline, AppTranslations.t(_appLang, 'comments'), () => setState(() => _selectedIndex = 2)),
+        _menuTile(Icons.emoji_events_outlined, AppTranslations.t(_appLang, 'podium'), () => setState(() => _selectedIndex = 3)),
+        _menuTile(Icons.casino_outlined, AppTranslations.t(_appLang, 'interaction'), () => setState(() => _selectedIndex = 4)),
+        _menuTile(Icons.layers_outlined, AppTranslations.t(_appLang, 'studio'), () => setState(() => _selectedIndex = 5)),
+        _menuTile(Icons.grid_view_rounded, AppTranslations.t(_appLang, 'stream_deck'), () => setState(() => _selectedIndex = 6), badge: 'DECK'),
+        _menuTile(Icons.public, AppTranslations.t(_appLang, 'community'), () => setState(() => _selectedIndex = 7), badge: 'MUNDO'),
+        _menuTile(Icons.favorite_border, AppTranslations.t(_appLang, 'about'), () => setState(() => _selectedIndex = 8)),
+        _menuTile(Icons.settings_outlined, AppTranslations.t(_appLang, 'settings'), () => setState(() => _selectedIndex = 9)),
+      ],
+    );
+  }
+  Widget _buildSuperAlertsTab() {
+    final cleanRoom = (_channelCtrl.text.trim().isEmpty ? 'teu_canal' : _channelCtrl.text.trim()).toLowerCase().replaceAll('@', '');
+    final donateUrl = '$serverUrl/doar/$cleanRoom';
+
     return DefaultTabController(
-      length: 2,
+      length: 4,
       child: Column(
         children: [
           const TabBar(
+            isScrollable: true,
             indicatorColor: Color(0xFF38BDF8),
             labelColor: Color(0xFF38BDF8),
             unselectedLabelColor: Colors.white54,
-            tabs: [Tab(text: '🔊 Sons & Efeitos'), Tab(text: '🎞️ GIFs & Pesquisa Online')],
+            tabs: [
+              Tab(text: '🎁 Presentes TikTok'),
+              Tab(text: '❤️ Seguidores & Likes'),
+              Tab(text: '🎯 Metas & Doações'),
+              Tab(text: '🎞️ Biblioteca GIF/Som'),
+            ],
           ),
           Expanded(
             child: TabBarView(
               children: [
-                Column(
+                ListView(
+                  padding: const EdgeInsets.all(16),
                   children: [
-                    Expanded(
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _sounds.length,
-                        itemBuilder: (ctx, i) {
-                          final s = _sounds[i];
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            decoration: _neonCard(),
-                            child: ListTile(
-                              leading: const Icon(Icons.play_circle_fill, color: Color(0xFF38BDF8), size: 32),
-                              title: Text(s['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
-                              subtitle: Text(s['cat'] ?? ''),
-                              onTap: () async {
-                                await sfxAudioPlayer.stop();
-                                if ((s['path'] ?? '').isNotEmpty) {
-                                  await sfxAudioPlayer.play(DeviceFileSource(s['path']!));
-                                } else if ((s['url'] ?? '').isNotEmpty) {
-                                  await sfxAudioPlayer.play(UrlSource(s['url']!));
+                    const Text('Catálogo de Presentes (Toca para testar na live):', style: TextStyle(fontSize: 13, color: Colors.white70)),
+                    const SizedBox(height: 10),
+                    ...DefaultMediaLibrary.tiktokGiftsCatalog.map((g) => Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          decoration: _neonCard(),
+                          child: ListTile(
+                            leading: ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(g['gif'], width: 42, height: 42, fit: BoxFit.cover)),
+                            title: Text(g['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
+                            subtitle: Text('${g['coins']} moedas · Som & GIF configurados', style: const TextStyle(fontSize: 11.5, color: Colors.white54)),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.play_circle_fill, color: Color(0xFF38BDF8)),
+                              onPressed: () {
+                                if (_channelCtrl.text.trim().isNotEmpty) {
+                                  socket.emit('trigger_overlay_alert', {
+                                    'room': _channelCtrl.text.trim(),
+                                    'alertData': {'user': 'Apoiante enviou ${g['name']}!', 'message': '', 'gifUrl': g['gif'], 'soundUrl': g['sound'], 'duration': 5}
+                                  });
                                 }
+                                sfxAudioPlayer.play(UrlSource(g['sound']));
+                                _showSnack('Alerta "${g['name']}" disparado!');
                               },
                             ),
-                          );
-                        },
+                          ),
+                        )),
+                  ],
+                ),
+                ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: _neonCard(),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Alerta de Novo Seguidor', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF38BDF8))),
+                          const SizedBox(height: 8),
+                          ClipRRect(borderRadius: BorderRadius.circular(10), child: Image.network(_followerGif, height: 100, fit: BoxFit.cover)),
+                          const SizedBox(height: 8),
+                          const Text('Toca num GIF na aba Biblioteca para trocar este visual.', style: TextStyle(fontSize: 11.5, color: Colors.white54)),
+                        ],
                       ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF)),
-                          onPressed: _importLocalSound,
-                          icon: const Icon(Icons.upload_file, color: Colors.white),
-                          label: const Text('Importar Som (.MP3 / .WAV)', style: TextStyle(color: Colors.white)),
-                        ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: _neonCard(),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Alerta de Meta Individual de Likes (Com Foto de Perfil)', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFF43F5E))),
+                          const SizedBox(height: 8),
+                          ClipRRect(borderRadius: BorderRadius.circular(10), child: Image.network(_likeMilestoneGif, height: 100, fit: BoxFit.cover)),
+                          const SizedBox(height: 8),
+                          const Text('Dispara automaticamente a cada 500 likes enviados por um seguidor com a foto dele na tela!', style: TextStyle(fontSize: 11.5, color: Colors.white54)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: _neonCard(),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('🎯 Barra de Meta Personalizada', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF38BDF8))),
+                          const SizedBox(height: 8),
+                          TextField(controller: _goalTitleCtrl, decoration: const InputDecoration(labelText: 'Texto da Meta')),
+                          const SizedBox(height: 8),
+                          TextField(controller: _goalTargetCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Objetivo (ex: 5000)')),
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF)),
+                              onPressed: () {
+                                socket.emit('update_goal', {
+                                  'room': cleanRoom,
+                                  'goal': {'title': _goalTitleCtrl.text.trim(), 'target': int.tryParse(_goalTargetCtrl.text.trim()) ?? 5000}
+                                });
+                                _showSnack('Meta atualizada na live!');
+                              },
+                              child: const Text('Atualizar Meta', style: TextStyle(color: Colors.white)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: _neonCard(),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('💸 Doações Diretas (PNG/GIF + MB Way / PIX)', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF38BDF8))),
+                          const SizedBox(height: 8),
+                          OutlinedButton.icon(onPressed: _pickLocalDonationImage, icon: const Icon(Icons.image), label: Text('Imagem ($_donationFileLabel)')),
+                          const SizedBox(height: 8),
+                          TextField(controller: _mbwayCtrl, decoration: const InputDecoration(labelText: 'MB Way')),
+                          const SizedBox(height: 8),
+                          TextField(controller: _pixCtrl, decoration: const InputDecoration(labelText: 'Chave PIX')),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF)),
+                                  onPressed: () {
+                                    socket.emit('update_donation_config', {
+                                      'room': cleanRoom,
+                                      'config': {'mbway': _mbwayCtrl.text.trim(), 'pix': _pixCtrl.text.trim(), 'imageData': _donationImageBase64OrUrl}
+                                    });
+                                    _showSnack('Doações guardadas!');
+                                  },
+                                  child: const Text('Guardar', style: TextStyle(color: Colors.white)),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: () {
+                                    Clipboard.setData(ClipboardData(text: donateUrl));
+                                    _showSnack('Link de Doação copiado!');
+                                  },
+                                  child: const Text('Copiar Link'),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -726,12 +795,7 @@ class _MainShellState extends State<MainShell> {
                   children: [
                     Row(
                       children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _gifSearchCtrl,
-                            decoration: const InputDecoration(hintText: 'Pesquisar milhares de GIFs...', border: OutlineInputBorder(), isDense: true),
-                          ),
-                        ),
+                        Expanded(child: TextField(controller: _gifSearchCtrl, decoration: const InputDecoration(hintText: 'Pesquisar GIFs online...', border: OutlineInputBorder(), isDense: true))),
                         const SizedBox(width: 8),
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF)),
@@ -740,11 +804,11 @@ class _MainShellState extends State<MainShell> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     if (_searchingGifs) const Center(child: CircularProgressIndicator()),
                     if (_onlineGifResults.isNotEmpty) ...[
-                      const Text('Resultados Online (Toca para guardar):', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF38BDF8))),
-                      const SizedBox(height: 8),
+                      const Text('Resultados Online (Toca para aplicar aos Seguidores):', style: TextStyle(fontSize: 12, color: Color(0xFF38BDF8))),
+                      const SizedBox(height: 6),
                       GridView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
@@ -755,41 +819,56 @@ class _MainShellState extends State<MainShell> {
                           return GestureDetector(
                             onTap: () {
                               setState(() {
-                                _gifs.insert(0, {'name': item['title'] ?? 'GIF Online', 'url': item['url']});
-                                _alertRules.first['gif'] = item['url'];
+                                _followerGif = item['url'];
+                                _gifs.insert(0, {'name': item['title'] ?? 'GIF', 'url': item['url']});
                               });
-                              _showSnack('GIF copiado e aplicado aos alertas!');
+                              _showSnack('GIF aplicado ao alerta de Seguidores!');
                             },
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(10),
-                              child: Image.network(item['url'], fit: BoxFit.cover),
-                            ),
+                            child: ClipRRect(borderRadius: BorderRadius.circular(10), child: Image.network(item['url'], fit: BoxFit.cover)),
                           );
                         },
                       ),
-                      const Divider(height: 24),
+                      const Divider(height: 20),
                     ],
-                    const Text('Biblioteca da App:', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const Text('Biblioteca de GIFs:', style: TextStyle(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
                     GridView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, crossAxisSpacing: 8, mainAxisSpacing: 8),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 4, crossAxisSpacing: 8, mainAxisSpacing: 8),
                       itemCount: _gifs.length,
                       itemBuilder: (ctx, i) {
                         final g = _gifs[i];
                         return GestureDetector(
                           onTap: () {
-                            setState(() => _alertRules.first['gif'] = g['url']);
-                            _showSnack('GIF "${g['name']}" selecionado!');
+                            setState(() => _followerGif = g['url']!);
+                            _showSnack('GIF "${g['name']}" aplicado!');
                           },
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
-                            child: Image.network(g['url']!, fit: BoxFit.cover),
-                          ),
+                          child: ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(g['url']!, fit: BoxFit.cover)),
                         );
                       },
                     ),
+                    const Divider(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Biblioteca de Sons:', style: TextStyle(fontWeight: FontWeight.bold)),
+                        TextButton.icon(onPressed: _importLocalSound, icon: const Icon(Icons.upload_file, size: 18), label: const Text('+ Importar MP3')),
+                      ],
+                    ),
+                    ..._sounds.map((s) => ListTile(
+                          dense: true,
+                          leading: const Icon(Icons.play_arrow, color: Color(0xFF38BDF8)),
+                          title: Text(s['name'] ?? ''),
+                          onTap: () async {
+                            await sfxAudioPlayer.stop();
+                            if ((s['path'] ?? '').isNotEmpty) {
+                              await sfxAudioPlayer.play(DeviceFileSource(s['path']!));
+                            } else if ((s['url'] ?? '').isNotEmpty) {
+                              await sfxAudioPlayer.play(UrlSource(s['url']!));
+                            }
+                          },
+                        )),
                   ],
                 ),
               ],
@@ -800,7 +879,7 @@ class _MainShellState extends State<MainShell> {
     );
   }
 
-  Widget _buildVoicesTab() {
+  Widget _buildCommentsTab() {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -813,7 +892,7 @@ class _MainShellState extends State<MainShell> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Leitura por Voz Neural', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const Text('Leitura por Voz do Chat', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   Switch(
                     activeColor: Colors.white,
                     activeTrackColor: const Color(0xFF1E78FF),
@@ -825,9 +904,7 @@ class _MainShellState extends State<MainShell> {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              const Text('Escolher Voz (Masculina / Feminina)', style: TextStyle(color: Colors.white70, fontSize: 13)),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _selectedVoiceKey,
                 dropdownColor: const Color(0xFF0B1636),
@@ -840,20 +917,40 @@ class _MainShellState extends State<MainShell> {
                   }
                 },
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
-                height: 46,
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF)),
-                  onPressed: () => _speakNeural('Olá! Esta é a voz oficial do HELL Live a funcionar perfeitamente!'),
+                  onPressed: () => _speakNeural('Olá! Esta é a voz do HELL Live a ler os comentários da tua transmissão!'),
                   icon: const Icon(Icons.volume_up, color: Colors.white),
-                  label: const Text('Testar Voz Agora', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  label: const Text('Testar Voz Selecionada', style: TextStyle(color: Colors.white)),
                 ),
               ),
             ],
           ),
         ),
+        const SizedBox(height: 14),
+        const Text('💬 Chat Ao Vivo (Toca numa mensagem para destacar na tela)', style: TextStyle(fontSize: 13, color: Colors.white70)),
+        const SizedBox(height: 8),
+        if (_chatFeed.isEmpty)
+          const Padding(padding: EdgeInsets.all(20), child: Center(child: Text('Os comentários da tua live vão aparecer aqui.', style: TextStyle(color: Colors.white38))))
+        else
+          ..._chatFeed.map((c) => Card(
+                color: const Color(0xFF0B1636),
+                child: ListTile(
+                  title: Text(c['user'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF38BDF8), fontSize: 13)),
+                  subtitle: Text(c['msg'] ?? ''),
+                  trailing: const Icon(Icons.push_pin_outlined, size: 18, color: Colors.white54),
+                  onTap: () {
+                    final room = _channelCtrl.text.trim();
+                    if (room.isNotEmpty) {
+                      socket.emit('pin_chat_message', {'room': room, 'user': c['user'], 'message': c['msg']});
+                      _showSnack('Comentário destacado na tela da live!');
+                    }
+                  },
+                ),
+              )),
       ],
     );
   }
@@ -908,32 +1005,14 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
-    final titles = [
-      'HELL Live',
-      AppTranslations.t(_appLang, 'alerts'),
-      AppTranslations.t(_appLang, 'sounds'),
-      AppTranslations.t(_appLang, 'voices'),
-      AppTranslations.t(_appLang, 'settings'),
-      AppTranslations.t(_appLang, 'podium_wheel'),
-      AppTranslations.t(_appLang, 'studio'),
-      AppTranslations.t(_appLang, 'stream_deck'),
-      AppTranslations.t(_appLang, 'community'),
-      AppTranslations.t(_appLang, 'about'),
-    ];
-
-    final screens = [
-      _buildHomeTab(),
-      _buildAlertsTab(),
-      _buildSoundsAndGifsTab(),
-      _buildVoicesTab(),
-      _buildSettingsTab(),
-      PodiumAndWheelScreen(socket: socket, roomName: _channelCtrl.text.trim(), topGifts: _topGifts, topLikes: _topLikes),
-      StudioAndDonationsScreen(socket: socket, serverUrl: serverUrl, roomName: _channelCtrl.text.trim()),
-      StreamDeckScreen(
+    if (_selectedIndex == 6) {
+      return StreamDeckScreen(
         socket: socket,
         activeRoom: _channelCtrl.text.trim(),
         generatedCode: _generatedPairCode,
         pairedRoom: _pairedRemoteRoom,
+        isMuted: _isMuted,
+        onToggleMute: _toggleMuteState,
         onGenerateCode: () {
           final room = _channelCtrl.text.trim();
           if (room.isEmpty) {
@@ -945,36 +1024,97 @@ class _MainShellState extends State<MainShell> {
         onJoinWithCode: (code) => socket.emit('request_pair', {'code': code, 'deviceName': 'Stream Deck'}),
         onSendCommand: (cmd, val) {
           final target = _pairedRemoteRoom ?? _channelCtrl.text.trim();
-          if (cmd == 'panic') _panicSilenceAll();
-          if (cmd == 'sound' && val != null) sfxAudioPlayer.play(UrlSource(val));
-          if (target.isNotEmpty) socket.emit('remote_command', {'room': target, 'command': cmd, 'payload': val});
+          if (cmd == 'sound' && val != null && !_isMuted) {
+            if (val.toString().startsWith('http')) {
+              sfxAudioPlayer.play(UrlSource(val));
+            } else {
+              sfxAudioPlayer.play(DeviceFileSource(val));
+            }
+          }
+          if (cmd == 'test_alert' && target.isNotEmpty) {
+            socket.emit('trigger_overlay_alert', {
+              'room': target,
+              'alertData': {'user': 'Teste Stream Deck', 'message': 'Alerta disparado pela consola!', 'gifUrl': _followerGif, 'duration': 5}
+            });
+          } else if (target.isNotEmpty) {
+            socket.emit('remote_command', {'room': target, 'command': cmd, 'payload': val});
+          }
         },
-      ),
+        onMinimizeDeck: () => setState(() => _selectedIndex = 0),
+      );
+    }
+
+    final titles = [
+      '',
+      AppTranslations.t(_appLang, 'alerts'),
+      AppTranslations.t(_appLang, 'comments'),
+      AppTranslations.t(_appLang, 'podium'),
+      AppTranslations.t(_appLang, 'interaction'),
+      AppTranslations.t(_appLang, 'studio'),
+      'Stream Deck',
+      AppTranslations.t(_appLang, 'community'),
+      AppTranslations.t(_appLang, 'about'),
+      AppTranslations.t(_appLang, 'settings'),
+    ];
+
+    final screens = [
+      _buildHomeTab(),
+      _buildSuperAlertsTab(),
+      _buildCommentsTab(),
+      PodiumScreen(socket: socket, roomName: _channelCtrl.text.trim(), topGifts: _topGifts, topLikes: _topLikes),
+      InteractionScreen(socket: socket, roomName: _channelCtrl.text.trim()),
+      OverlayStudioScreen(socket: socket, serverUrl: serverUrl, roomName: _channelCtrl.text.trim()),
+      const SizedBox(),
       CommunityGlobeScreen(serverUrl: serverUrl),
       const AboutHellLiveScreen(),
+      _buildSettingsTab(),
     ];
 
     return Scaffold(
       appBar: AppBar(
+        centerTitle: true,
         leading: _selectedIndex == 0
-            ? Padding(padding: const EdgeInsets.all(10.0), child: Image.asset('icon.png', errorBuilder: (_, __, ___) => const Icon(Icons.shield, color: Color(0xFF38BDF8))))
+            ? const SizedBox()
             : IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => setState(() => _selectedIndex = 0)),
-        title: Text(titles[_selectedIndex], style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
+        title: _selectedIndex == 0
+            ? Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Image.asset('icon.png', height: 32, errorBuilder: (_, __, ___) => const Icon(Icons.local_fire_department, color: Color(0xFF38BDF8), size: 28)),
+                  const SizedBox(width: 8),
+                  const Text('HELL ', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 22, letterSpacing: 2)),
+                  const Text('Live', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 22, color: Color(0xFF38BDF8))),
+                ],
+              )
+            : Text(titles[_selectedIndex], style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
         actions: [
-          IconButton(icon: const Icon(Icons.volume_off, color: Colors.redAccent), tooltip: 'Silenciar Tudo', onPressed: _panicSilenceAll),
-          if (_selectedIndex == 0) IconButton(icon: const Icon(Icons.settings_outlined, color: Colors.white70), onPressed: () => setState(() => _selectedIndex = 4)),
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: GestureDetector(
+              onTap: _toggleMuteState,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _isMuted ? Colors.redAccent : Colors.green,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(_isMuted ? Icons.volume_off : Icons.volume_up, color: Colors.white, size: 20),
+              ),
+            ),
+          ),
         ],
       ),
       body: screens[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex > 3 ? 3 : _selectedIndex,
-        onTap: (idx) => setState(() => _selectedIndex = idx == 3 ? 4 : idx),
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Início'),
-          BottomNavigationBarItem(icon: Icon(Icons.notifications_none), activeIcon: Icon(Icons.notifications), label: 'Alertas'),
-          BottomNavigationBarItem(icon: Icon(Icons.music_note_outlined), activeIcon: Icon(Icons.music_note), label: 'Sons/GIF'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings_outlined), activeIcon: Icon(Icons.settings), label: 'Definições'),
-        ],
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: Colors.white.withOpacity(0.08))),
+        ),
+        child: const Text(
+          'A tua live, no teu comando.  ·  LIVE  ·  PLAY  ·  CONNECT',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 11, letterSpacing: 1.5, color: Color(0xFF7DD3FC), fontWeight: FontWeight.w600),
+        ),
       ),
     );
   }
