@@ -214,8 +214,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                     ],
                   ),
                 ),
-                const SizedBox(height: 42),
-              ],
+                   const SizedBox(height: 42),
               ],
             );
           },
@@ -224,7 +223,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     );
   }
 }
-
 class MainShell extends StatefulWidget {
   final String currentTheme;
   final Function(String) onThemeChanged;
