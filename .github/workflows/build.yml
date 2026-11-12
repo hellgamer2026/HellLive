@@ -21,6 +21,10 @@ jobs:
         run: |
           flutter create --platforms=android --project-name hell_live .
           sed -i 's/android:label="hell_live"/android:label="HELL LIVE"/g' android/app/src/main/AndroidManifest.xml
+          sed -i 's/compileSdk = flutter.compileSdkVersion/compileSdk = 36/g' android/app/build.gradle.kts || true
+          sed -i 's/compileSdkVersion flutter.compileSdkVersion/compileSdkVersion 36/g' android/app/build.gradle || true
+          sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 23/g' android/app/build.gradle.kts || true
+          sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 23/g' android/app/build.gradle || true
           flutter pub get
           dart run flutter_launcher_icons
           flutter build apk --release
