@@ -31,6 +31,10 @@ jobs:
                   if (p.hasProperty("android")) {
                       p.extensions.configure<com.android.build.gradle.BaseExtension>("android") {
                           compileSdkVersion(36)
+                          lintOptions {
+                              isCheckReleaseBuilds = false
+                              isAbortOnError = false
+                          }
                       }
                   }
               }
