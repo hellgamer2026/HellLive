@@ -1,4 +1,4 @@
-name: Build HellLive APK e Windows
+name: Build HELL LIVE APK e Windows
 
 on:
   push:
@@ -17,15 +17,17 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-      - name: Preparar estrutura Android e compilar APK
+      - name: Preparar Android, Aplicar Ícone e Compilar APK
         run: |
-          flutter create --platforms=android .
+          flutter create --platforms=android --project-name hell_live .
+          sed -i 's/android:label="hell_live"/android:label="HELL LIVE"/g' android/app/src/main/AndroidManifest.xml
           flutter pub get
+          dart run flutter_launcher_icons
           flutter build apk --release
       - name: Guardar APK para Download
         uses: actions/upload-artifact@v4
         with:
-          name: HellLive-Android-APK
+          name: HELL-LIVE-Android-APK
           path: build/app/outputs/flutter-apk/app-release.apk
 
   build_windows:
@@ -35,13 +37,14 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-      - name: Preparar estrutura Windows e compilar EXE
+      - name: Preparar Windows, Aplicar Ícone e Compilar EXE
         run: |
-          flutter create --platforms=windows .
+          flutter create --platforms=windows --project-name hell_live .
           flutter pub get
+          dart run flutter_launcher_icons
           flutter build windows --release
       - name: Guardar App Windows para Download
         uses: actions/upload-artifact@v4
         with:
-          name: HellLive-Windows-PC
+          name: HELL-LIVE-Windows-PC
           path: build/windows/x64/runner/Release/
