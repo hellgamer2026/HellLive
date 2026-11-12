@@ -17,10 +17,10 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-      - name: Preparar Android, Aplicar Ícone e Compilar APK
+      - name: Preparar Android, Enquadrar Ícone e Compilar APK
         run: |
           flutter create --platforms=android --project-name hell_live .
-          sed -i 's/android:label="hell_live"/android:label="HELL LIVE"/g' android/app/src/main/AndroidManifest.xml
+          sed -i 's/android:label="hell_live"/android:label="HELL Live"/g' android/app/src/main/AndroidManifest.xml
           echo "flutter.compileSdkVersion=36" >> android/local.properties
           echo "flutter.minSdkVersion=23" >> android/local.properties
           sed -i 's/flutter.compileSdkVersion/36/g' android/app/build.gradle.kts || true
@@ -41,6 +41,9 @@ jobs:
               }
           }
           EOF
+          python3 -c "from PIL import Image, ImageDraw; img = Image.open('icon.png').convert('RGBA'); px = [(r, g, b, 0) if (r < 25 and g < 25 and b < 35) else (r, g, b, a) for r, g, b, a in img.getdata()]; img.putdata(px); bg = Image.new('RGBA', (1024, 1024), (7, 20, 54, 255)); glow = Image.new('RGBA', (1024, 1024), (0, 0, 0, 0)); draw = ImageDraw.Draw(glow); [draw.ellipse([512-r, 512-r, 512+r, 512+r], fill=(30, 120, 255, int(110*(1-r/420)))) for r in range(420, 0, -8)]; bg = Image.alpha_composite(bg, glow); fg = img.resize((620, 620)); bg.paste(fg, (202, 202), fg); bg.save('icon_tablet.png')"
+          sed -i 's/adaptive_icon_background: "#000000"/adaptive_icon_background: "#071436"/g' pubspec.yaml
+          sed -i 's/adaptive_icon_foreground: "icon.png"/adaptive_icon_foreground: "icon_tablet.png"/g' pubspec.yaml
           flutter pub get
           dart run flutter_launcher_icons
           flutter build apk --release
