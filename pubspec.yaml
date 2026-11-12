@@ -1,5 +1,5 @@
 name: hell_live
-description: Aplicativo de alertas e leitura de lives em tempo real.
+description: HELL LIVE - Aplicativo de alertas e leitura de lives em tempo real.
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -12,10 +12,24 @@ dependencies:
   socket_io_client: ^2.0.3+1
   flutter_tts: ^4.0.2
   shared_preferences: ^2.2.2
+  file_picker: ^8.0.0+1
+  audioplayers: ^6.0.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_launcher_icons: ^0.13.1
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "icon.png"
+  adaptive_icon_background: "#000000"
+  adaptive_icon_foreground: "icon.png"
+  windows:
+    generate: true
+    image_path: "icon.png"
 
 flutter:
   uses-material-design: true
+
