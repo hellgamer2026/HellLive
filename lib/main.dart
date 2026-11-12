@@ -95,7 +95,7 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _selectedIndex = 0;
 
-  final String serverUrl = 'https://onrender.com';
+  final String serverUrl = 'https://live-alerts-engine.onrender.com';
   late IO.Socket socket;
   final FlutterTts flutterTts = FlutterTts();
   final AudioPlayer audioPlayer = AudioPlayer();
