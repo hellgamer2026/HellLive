@@ -8,7 +8,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:http/http.dart' as http;
 import 'app_data.dart';
-import 'lib/studio_screens.dart';
+import 'studio_screens.dart';
 import 'deck_and_community.dart';
 
 void main() {
