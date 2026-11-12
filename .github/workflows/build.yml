@@ -21,18 +21,23 @@ jobs:
         run: |
           flutter create --platforms=android --project-name hell_live .
           sed -i 's/android:label="hell_live"/android:label="HELL LIVE"/g' android/app/src/main/AndroidManifest.xml
+          echo "flutter.compileSdkVersion=36" >> android/local.properties
+          echo "flutter.minSdkVersion=23" >> android/local.properties
           sed -i 's/flutter.compileSdkVersion/36/g' android/app/build.gradle.kts || true
-          sed -i 's/flutter.compileSdkVersion/36/g' android/app/build.gradle || true
           sed -i 's/flutter.minSdkVersion/23/g' android/app/build.gradle.kts || true
-          sed -i 's/flutter.minSdkVersion/23/g' android/app/build.gradle || true
           cat << 'EOF' >> android/build.gradle.kts
           subprojects {
-              afterEvaluate {
-                  if (project.hasProperty("android")) {
-                      project.extensions.configure<com.android.build.gradle.BaseExtension>("android") {
+              val configureAndroid: (Project) -> Unit = { p ->
+                  if (p.hasProperty("android")) {
+                      p.extensions.configure<com.android.build.gradle.BaseExtension>("android") {
                           compileSdkVersion(36)
                       }
                   }
+              }
+              if (state.executed) {
+                  configureAndroid(this)
+              } else {
+                  afterEvaluate { configureAndroid(this) }
               }
           }
           EOF
