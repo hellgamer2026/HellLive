@@ -503,19 +503,19 @@ class _MainShellState extends State<MainShell> {
         RadioListTile<String>(
           title: const Text('Azul (Padrão HELL LIVE)'),
           value: 'azul',
-          groupValue: _themeMode,
+          groupValue: widget.currentTheme,
           onChanged: (val) => widget.onThemeChanged(val!),
         ),
         RadioListTile<String>(
           title: const Text('Escuro'),
           value: 'escuro',
-          groupValue: _themeMode,
+          groupValue: widget.currentTheme,
           onChanged: (val) => widget.onThemeChanged(val!),
         ),
         RadioListTile<String>(
           title: const Text('Claro'),
           value: 'claro',
-          groupValue: _themeMode,
+          groupValue: widget.currentTheme,
           onChanged: (val) => widget.onThemeChanged(val!),
         ),
       ],
