@@ -43,6 +43,15 @@ class _StreamDeckScreenState extends State<StreamDeckScreen> {
   int _currentPage = 0;
   int _cols = 5;
   int _rows = 3;
+  Color _deckBgColor = const Color(0xFF050B1E);
+
+  static final List<Color> _deckBgOptions = [
+    const Color(0xFF050B1E),
+    const Color(0xFF07090E),
+    const Color(0xFF140A26),
+    const Color(0xFF061A14),
+    const Color(0xFF18181B),
+  ];
 
   static final List<IconData> _iconLibrary = [
     Icons.celebration_outlined,
@@ -126,14 +135,42 @@ class _StreamDeckScreenState extends State<StreamDeckScreen> {
     super.dispose();
   }
 
+  void _openDeckThemePicker() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF0B1636),
+        title: const Text('Cor de Fundo da Consola', style: TextStyle(fontSize: 16)),
+        content: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: _deckBgOptions.map((c) {
+            return GestureDetector(
+              onTap: () {
+                setState(() => _deckBgColor = c);
+                Navigator.pop(ctx);
+              },
+              child: Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: c,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: _deckBgColor == c ? const Color(0xFF38BDF8) : Colors.white38, width: 2.5),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
   void _openPairModal() {
     final codeCtrl = TextEditingController();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: Theme.of(context).cardColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Emparelhar Dispositivo', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+        backgroundColor: const Color(0xFF0B1636),
+        title: const Text('Emparelhar Dispositivo', style: TextStyle(fontSize: 16)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -183,11 +220,46 @@ class _StreamDeckScreenState extends State<StreamDeckScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) => AlertDialog(
-          backgroundColor: Theme.of(context).cardColor,
+          backgroundColor: const Color(0xFF0B1636),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Personalizar Tecla', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Personalizar Tecla', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+              Row(
+                children: [
+                  if (btnIdx > 0)
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back, size: 18),
+                      tooltip: 'Mover Esquerda',
+                      onPressed: () {
+                        setState(() {
+                          final tmp = _pages[pageIdx][btnIdx - 1];
+                          _pages[pageIdx][btnIdx - 1] = _pages[pageIdx][btnIdx];
+                          _pages[pageIdx][btnIdx] = tmp;
+                        });
+                        Navigator.pop(ctx);
+                      },
+                    ),
+                  if (btnIdx < _pages[pageIdx].length - 1)
+                    IconButton(
+                      icon: const Icon(Icons.arrow_forward, size: 18),
+                      tooltip: 'Mover Direita',
+                      onPressed: () {
+                        setState(() {
+                          final tmp = _pages[pageIdx][btnIdx + 1];
+                          _pages[pageIdx][btnIdx + 1] = _pages[pageIdx][btnIdx];
+                          _pages[pageIdx][btnIdx] = tmp;
+                        });
+                        Navigator.pop(ctx);
+                      },
+                    ),
+                ],
+              ),
+            ],
+          ),
           content: SizedBox(
-            width: 420,
+            width: 430,
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -210,8 +282,6 @@ class _StreamDeckScreenState extends State<StreamDeckScreen> {
                     ],
                   ),
                   const SizedBox(height: 10),
-                  const Text('Cor da Tecla:', style: TextStyle(fontSize: 12, color: Colors.white70)),
-                  const SizedBox(height: 6),
                   Row(
                     children: _accentColors.map((c) {
                       final isSel = selectedColor.value == c.value;
@@ -219,31 +289,16 @@ class _StreamDeckScreenState extends State<StreamDeckScreen> {
                         onTap: () => setModalState(() => selectedColor = c),
                         child: Container(
                           margin: const EdgeInsets.only(right: 8),
-                          width: 26,
-                          height: 26,
-                          decoration: BoxDecoration(
-                            color: c,
-                            shape: BoxShape.circle,
-                            border: isSel ? Border.all(color: Colors.white, width: 2.5) : null,
-                          ),
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(color: c, shape: BoxShape.circle, border: isSel ? Border.all(color: Colors.white, width: 2) : null),
                         ),
                       );
                     }).toList(),
                   ),
                   const SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Biblioteca de Ícones:', style: TextStyle(fontSize: 12, color: Colors.white70)),
-                      if (selectedPng != null)
-                        TextButton(
-                          onPressed: () => setModalState(() => selectedPng = null),
-                          child: const Text('Usar Ícone da Biblioteca', style: TextStyle(fontSize: 11)),
-                        ),
-                    ],
-                  ),
                   SizedBox(
-                    height: 110,
+                    height: 105,
                     child: GridView.builder(
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 8, crossAxisSpacing: 6, mainAxisSpacing: 6),
                       itemCount: _iconLibrary.length,
@@ -274,7 +329,6 @@ class _StreamDeckScreenState extends State<StreamDeckScreen> {
                       Expanded(child: TextField(controller: urlCtrl, decoration: const InputDecoration(labelText: 'Som (.MP3 / Link)', isDense: true))),
                       IconButton(
                         icon: const Icon(Icons.audio_file_outlined),
-                        tooltip: 'Escolher MP3 do Aparelho',
                         onPressed: () async {
                           final res = await FilePicker.platform.pickFiles(type: FileType.audio);
                           if (res != null && res.files.single.path != null) {
@@ -313,17 +367,13 @@ class _StreamDeckScreenState extends State<StreamDeckScreen> {
       ),
     );
   }
-
   @override
   Widget build(BuildContext context) {
-    final isLight = Theme.of(context).brightness == Brightness.light;
-    final bgColor = Theme.of(context).scaffoldBackgroundColor;
-    final keySurface = isLight ? Colors.white : const Color(0xFF0C152C);
-    final borderSubtle = isLight ? Colors.black12 : Colors.white.withOpacity(0.08);
+    final keySurface = Color.lerp(_deckBgColor, Colors.white, 0.06)!;
     final itemsPerPage = (_cols * _rows).clamp(1, 15);
 
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: _deckBgColor,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
@@ -335,7 +385,7 @@ class _StreamDeckScreenState extends State<StreamDeckScreen> {
                     value: '${_cols}x$_rows',
                     underline: const SizedBox(),
                     dropdownColor: keySurface,
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: isLight ? Colors.black87 : Colors.white70),
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white70),
                     items: const [
                       DropdownMenuItem(value: '5x3', child: Text('5 × 3')),
                       DropdownMenuItem(value: '4x3', child: Text('4 × 3')),
@@ -346,13 +396,13 @@ class _StreamDeckScreenState extends State<StreamDeckScreen> {
                       if (val != null) {
                         final parts = val.split('x');
                         setState(() {
-                          _cols = int.parse(parts[0]);
-                          _rows = int.parse(parts[1]);
+                          _cols = int.parse(parts);
+                          _rows = int.parse(parts);
                         });
                       }
                     },
                   ),
-                  const SizedBox(width: 6),
+                  IconButton(icon: const Icon(Icons.palette_outlined, size: 19), tooltip: 'Cor de Fundo', onPressed: _openDeckThemePicker),
                   IconButton(icon: const Icon(Icons.link_rounded, size: 19), tooltip: 'Emparelhar', onPressed: _openPairModal),
                   IconButton(
                     icon: const Icon(Icons.add_rounded, size: 20),
@@ -363,10 +413,10 @@ class _StreamDeckScreenState extends State<StreamDeckScreen> {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Image.asset('icon.png', height: 18, errorBuilder: (_, __, ___) => const Icon(Icons.local_fire_department, color: Color(0xFF38BDF8), size: 17)),
-                      const SizedBox(width: 8),
-                      Text('HELL ', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13.5, letterSpacing: 3.2, color: isLight ? Colors.black87 : Colors.white)),
-                      const Text('LIVE', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13.5, letterSpacing: 3.2, color: Color(0xFF38BDF8))),
+                      Image.asset('icon.png', height: 20, errorBuilder: (_, __, ___) => const Icon(Icons.local_fire_department, color: Color(0xFF38BDF8), size: 18)),
+                      const SizedBox(width: 4),
+                      const Text('ELL ', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14, letterSpacing: 3, color: Colors.white)),
+                      const Text('LIVE', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14, letterSpacing: 3, color: Color(0xFF38BDF8))),
                     ],
                   ),
                   const Spacer(),
@@ -396,7 +446,7 @@ class _StreamDeckScreenState extends State<StreamDeckScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 8),
                   IconButton(icon: const Icon(Icons.minimize_rounded, size: 20), tooltip: 'Minimizar', onPressed: widget.onMinimizeDeck),
                 ],
               ),
@@ -446,13 +496,13 @@ class _StreamDeckScreenState extends State<StreamDeckScreen> {
                                 child: Container(
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(14),
-                                    border: Border.all(color: isCustomEmpty ? borderSubtle : accent.withOpacity(0.35), width: 1),
+                                    border: Border.all(color: isCustomEmpty ? Colors.white10 : accent.withOpacity(0.38), width: 1),
                                   ),
                                   child: Stack(
                                     alignment: Alignment.center,
                                     children: [
                                       if (isCustomEmpty)
-                                        Text('HELL', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 11, letterSpacing: 3, color: isLight ? Colors.black12 : Colors.white.withOpacity(0.08)))
+                                        Text('HELL', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 11, letterSpacing: 3, color: Colors.white.withOpacity(0.08)))
                                       else
                                         Column(
                                           mainAxisAlignment: MainAxisAlignment.center,
@@ -460,7 +510,7 @@ class _StreamDeckScreenState extends State<StreamDeckScreen> {
                                             if (pngPath != null)
                                               ClipRRect(
                                                 borderRadius: BorderRadius.circular(6),
-                                                child: Image.file(File(pngPath), width: _rows == 2 ? 32 : 24, height: _rows == 2 ? 32 : 24, fit: BoxFit.cover),
+                                                child: Image.file(File(pngPath), width: _rows == 2 ? 34 : 26, height: _rows == 2 ? 34 : 26, fit: BoxFit.cover),
                                               )
                                             else
                                               Icon(
@@ -480,7 +530,6 @@ class _StreamDeckScreenState extends State<StreamDeckScreen> {
                                               ),
                                             ),
                                           ],
-                                        ),
                                       if (!isCustomEmpty)
                                         Positioned(
                                           bottom: 0,
@@ -516,7 +565,7 @@ class _StreamDeckScreenState extends State<StreamDeckScreen> {
                     width: active ? 18 : 6,
                     height: 6,
                     decoration: BoxDecoration(
-                      color: active ? const Color(0xFF38BDF8) : (isLight ? Colors.black26 : Colors.white24),
+                      color: active ? const Color(0xFF38BDF8) : Colors.white24,
                       borderRadius: BorderRadius.circular(4),
                     ),
                   );
@@ -546,7 +595,7 @@ class _CommunityGlobeScreenState extends State<CommunityGlobeScreen> with Single
   @override
   void initState() {
     super.initState();
-    _globeCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 18))..repeat();
+    _globeCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 22))..repeat();
     _fetchLiveStreamers();
   }
 
@@ -577,9 +626,9 @@ class _CommunityGlobeScreenState extends State<CommunityGlobeScreen> with Single
       padding: const EdgeInsets.all(16),
       children: [
         Container(
-          height: 310,
+          height: 320,
           decoration: BoxDecoration(
-            gradient: const RadialGradient(colors: [Color(0xFF15368A), Color(0xFF04091A)]),
+            gradient: const RadialGradient(colors: [Color(0xFF132E73), Color(0xFF030712)]),
             borderRadius: BorderRadius.circular(18),
             border: Border.all(color: const Color(0xFF1E78FF), width: 1.5),
           ),
@@ -589,13 +638,13 @@ class _CommunityGlobeScreenState extends State<CommunityGlobeScreen> with Single
               AnimatedBuilder(
                 animation: _globeCtrl,
                 builder: (_, __) => CustomPaint(
-                  size: const Size(255, 255),
-                  painter: _RealisticGlobePainter(_globeCtrl.value * 2 * pi),
+                  size: const Size(265, 265),
+                  painter: _WorldContinentsGlobePainter(_globeCtrl.value * 2 * pi),
                 ),
               ),
               const Positioned(
                 bottom: 12,
-                child: Text('🌍 COMUNIDADE GLOBAL HELL LIVE', style: TextStyle(fontSize: 11.5, letterSpacing: 2, color: Color(0xFF38BDF8), fontWeight: FontWeight.bold)),
+                child: Text('🌍 COMUNIDADE MUNDIAL HELL LIVE', style: TextStyle(fontSize: 11.5, letterSpacing: 2, color: Color(0xFF38BDF8), fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -638,9 +687,53 @@ class _CommunityGlobeScreenState extends State<CommunityGlobeScreen> with Single
   }
 }
 
-class _RealisticGlobePainter extends CustomPainter {
+class _WorldContinentsGlobePainter extends CustomPainter {
   final double rotation;
-  _RealisticGlobePainter(this.rotation);
+  _WorldContinentsGlobePainter(this.rotation);
+
+  void _drawContinentsMap(Canvas canvas, double ox, double cy, double r, Paint fill, Paint stroke) {
+    final na = Path()
+      ..moveTo(ox + r * 0.15, cy - r * 0.55)
+      ..lineTo(ox + r * 0.48, cy - r * 0.58)
+      ..lineTo(ox + r * 0.42, cy - r * 0.18)
+      ..lineTo(ox + r * 0.28, cy - r * 0.12)
+      ..close();
+    final sa = Path()
+      ..moveTo(ox + r * 0.36, cy - r * 0.05)
+      ..lineTo(ox + r * 0.54, cy + r * 0.08)
+      ..lineTo(ox + r * 0.44, cy + r * 0.58)
+      ..lineTo(ox + r * 0.34, cy + r * 0.35)
+      ..close();
+    final eu = Path()
+      ..moveTo(ox + r * 0.88, cy - r * 0.52)
+      ..lineTo(ox + r * 1.18, cy - r * 0.56)
+      ..lineTo(ox + r * 1.15, cy - r * 0.25)
+      ..lineTo(ox + r * 0.85, cy - r * 0.24)
+      ..close();
+    final af = Path()
+      ..moveTo(ox + r * 0.86, cy - r * 0.18)
+      ..lineTo(ox + r * 1.16, cy - r * 0.14)
+      ..lineTo(ox + r * 1.08, cy + r * 0.48)
+      ..lineTo(ox + r * 0.92, cy + r * 0.32)
+      ..close();
+    final as = Path()
+      ..moveTo(ox + r * 1.22, cy - r * 0.55)
+      ..lineTo(ox + r * 1.78, cy - r * 0.48)
+      ..lineTo(ox + r * 1.72, cy + r * 0.05)
+      ..lineTo(ox + r * 1.25, cy - r * 0.05)
+      ..close();
+    final oc = Path()
+      ..moveTo(ox + r * 1.52, cy + r * 0.18)
+      ..lineTo(ox + r * 1.78, cy + r * 0.20)
+      ..lineTo(ox + r * 1.74, cy + r * 0.45)
+      ..lineTo(ox + r * 1.50, cy + r * 0.40)
+      ..close();
+
+    for (final p in [na, sa, eu, af, as, oc]) {
+      canvas.drawPath(p, fill);
+      canvas.drawPath(p, stroke);
+    }
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -649,58 +742,55 @@ class _RealisticGlobePainter extends CustomPainter {
 
     final oceanPaint = Paint()
       ..shader = const RadialGradient(
-        center: Alignment(-0.3, -0.3),
-        colors: [Color(0xFF1D4ED8), Color(0xFF0B1E52), Color(0xFF040B24)],
+        center: Alignment(-0.35, -0.35),
+        colors: [Color(0xFF1E40AF), Color(0xFF0A1942), Color(0xFF030714)],
       ).createShader(Rect.fromCircle(center: center, radius: radius));
     canvas.drawCircle(center, radius, oceanPaint);
-
-    final atmospherePaint = Paint()
-      ..color = const Color(0xFF38BDF8).withOpacity(0.55)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5;
-    canvas.drawCircle(center, radius, atmospherePaint);
 
     canvas.save();
     canvas.clipPath(Path()..addOval(Rect.fromCircle(center: center, radius: radius)));
 
-    final landPaint = Paint()..color = const Color(0xFF38BDF8).withOpacity(0.28);
-    final shift = (rotation / (2 * pi)) * radius * 2;
+    final landFill = Paint()..color = const Color(0xFF38BDF8).withOpacity(0.32)..style = PaintingStyle.fill;
+    final landStroke = Paint()..color = const Color(0xFF7DD3FC).withOpacity(0.75)..style = PaintingStyle.stroke..strokeWidth = 1.2;
+
+    final mapWidth = radius * 2.0;
+    final shift = (rotation / (2 * pi)) * mapWidth;
     for (int rep = -1; rep <= 1; rep++) {
-      final ox = center.dx - radius + shift + (rep * radius * 2);
-      canvas.drawOval(Rect.fromLTWH(ox + 25, center.dy - 65, 55, 45), landPaint);
-      canvas.drawOval(Rect.fromLTWH(ox + 45, center.dy - 10, 42, 65), landPaint);
-      canvas.drawOval(Rect.fromLTWH(ox + 115, center.dy - 70, 65, 40), landPaint);
-      canvas.drawOval(Rect.fromLTWH(ox + 120, center.dy - 20, 50, 70), landPaint);
-      canvas.drawOval(Rect.fromLTWH(ox + 185, center.dy - 55, 65, 50), landPaint);
+      final ox = center.dx - radius + shift + (rep * mapWidth);
+      _drawContinentsMap(canvas, ox, center.dy, radius, landFill, landStroke);
     }
 
-    final gridPaint = Paint()
-      ..color = Colors.white.withOpacity(0.12)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 0.8;
-    for (int i = -2; i <= 2; i++) {
-      final y = center.dy + i * (radius / 3);
-      canvas.drawLine(Offset(center.dx - radius, y), Offset(center.dx + radius, y), gridPaint);
-    }
+    final shadow3D = Paint()
+      ..shader = RadialGradient(
+        center: const Alignment(-0.3, -0.3),
+        radius: 1.05,
+        colors: [Colors.transparent, Colors.black.withOpacity(0.65)],
+        stops: const [0.65, 1.0],
+      ).createShader(Rect.fromCircle(center: center, radius: radius));
+    canvas.drawCircle(center, radius, shadow3D);
 
-    final beaconGlow = Paint()..color = const Color(0xFF4ADE80).withOpacity(0.4);
     final beaconDot = Paint()..color = const Color(0xFF4ADE80);
-    final pts = [
-      Offset(center.dx + cos(rotation) * 50, center.dy - 30),
-      Offset(center.dx - sin(rotation) * 65, center.dy + 35),
-      Offset(center.dx + cos(rotation + 1.5) * 40, center.dy + 15),
-    ];
-    for (final p in pts) {
+    final beaconGlow = Paint()..color = const Color(0xFF4ADE80).withOpacity(0.45);
+    for (final p in [
+      Offset(center.dx + cos(rotation) * 55, center.dy - 35),
+      Offset(center.dx - sin(rotation) * 65, center.dy + 30),
+      Offset(center.dx + cos(rotation + 2.0) * 45, center.dy + 12),
+    ]) {
       canvas.drawCircle(p, 7, beaconGlow);
       canvas.drawCircle(p, 3, beaconDot);
     }
     canvas.restore();
+
+    final rimPaint = Paint()
+      ..color = const Color(0xFF38BDF8).withOpacity(0.65)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.2;
+    canvas.drawCircle(center, radius, rimPaint);
   }
 
   @override
-  bool shouldRepaint(covariant _RealisticGlobePainter oldDelegate) => true;
+  bool shouldRepaint(covariant _WorldContinentsGlobePainter oldDelegate) => true;
 }
-
 class AboutHellLiveScreen extends StatelessWidget {
   const AboutHellLiveScreen({super.key});
 
@@ -726,7 +816,7 @@ class AboutHellLiveScreen extends StatelessWidget {
           child: const Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Feito de Criadores para Criadores', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8))),
+              Text('Feito a pensar em ti', style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8))),
               SizedBox(height: 12),
               Text(
                 'Sabemos exatamente o que custa começar uma transmissão do zero. Muitas vezes tens o talento, a energia e a vontade de entreter, mas esbarras em ferramentas caras, pesadas ou cheias de bloqueios logo no primeiro dia.\n\nO HELL Live nasceu para mudar isso. Este projeto foi criado a pensar em ti — quer jogues num telemóvel modesto no quarto ou num estúdio completo no PC.\n\nAqui, tu fazes parte da família: cada funcionalidade foi desenhada para aproximar-te do teu chat, dar voz aos teus seguidores e tornar cada live inesquecível sem te cobrar pelo essencial.\n\nObrigado por fazeres parte desta comunidade. Esta casa é tua!',
@@ -739,3 +829,4 @@ class AboutHellLiveScreen extends StatelessWidget {
     );
   }
 }
+
