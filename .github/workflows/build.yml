@@ -25,11 +25,23 @@ jobs:
           echo "flutter.minSdkVersion=23" >> android/local.properties
           sed -i 's/flutter.compileSdkVersion/36/g' android/app/build.gradle.kts || true
           sed -i 's/flutter.minSdkVersion/23/g' android/app/build.gradle.kts || true
-          cat << 'EOF' >> android/build.gradle.kts
+          cat << 'EOF' > android/build.gradle.kts
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+
+          val newBuildDir: Directory = rootProject.layout.buildDirectory.dir("../../build").get()
+          rootProject.layout.buildDirectory.value(newBuildDir)
+
           subprojects {
-              val configureAndroid: (Project) -> Unit = { p ->
-                  if (p.hasProperty("android")) {
-                      p.extensions.configure<com.android.build.gradle.BaseExtension>("android") {
+              val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
+              project.layout.buildDirectory.value(newSubprojectBuildDir)
+              afterEvaluate {
+                  if (project.hasProperty("android")) {
+                      project.extensions.configure<com.android.build.gradle.BaseExtension>("android") {
                           compileSdkVersion(36)
                           lintOptions {
                               isCheckReleaseBuilds = false
@@ -38,11 +50,10 @@ jobs:
                       }
                   }
               }
-              if (state.executed) {
-                  configureAndroid(this)
-              } else {
-                  afterEvaluate { configureAndroid(this) }
-              }
+          }
+
+          tasks.register<Delete>("clean") {
+              delete(rootProject.layout.buildDirectory)
           }
           EOF
           sudo apt-get update && sudo apt-get install -y python3-pil
