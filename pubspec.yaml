@@ -19,7 +19,7 @@ dependencies:
   local_auth: ^2.3.0
   wakelock_plus: ^1.2.8
   google_sign_in: ^6.2.1
-  record: ^5.1.2
+  record: ^6.1.2
 
 dev_dependencies:
   flutter_test:
