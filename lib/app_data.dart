@@ -4,8 +4,8 @@ class AppTranslations {
       'pt': {
         'actions': 'Ações',
         'donation': 'Donation',
-        'music': 'Música & Fundo',
-        'interaction': 'Interação & Pódio',
+        'music': 'Música',
+        'interaction': 'Interações',
         'overlays': 'Galeria de Overlays',
         'stream_deck': 'Stream Deck Pro',
         'community': 'Comunidade Global',
@@ -16,8 +16,8 @@ class AppTranslations {
       'en': {
         'actions': 'Actions',
         'donation': 'Donation',
-        'music': 'Music & Background',
-        'interaction': 'Interaction & Podium',
+        'music': 'Music',
+        'interaction': 'Interactions',
         'overlays': 'Overlays Gallery',
         'stream_deck': 'Stream Deck Pro',
         'community': 'Global Community',
@@ -28,8 +28,8 @@ class AppTranslations {
       'es': {
         'actions': 'Acciones',
         'donation': 'Donation',
-        'music': 'Música y Fondo',
-        'interaction': 'Interacción y Podio',
+        'music': 'Música',
+        'interaction': 'Interacciones',
         'overlays': 'Galería de Overlays',
         'stream_deck': 'Stream Deck Pro',
         'community': 'Comunidad Global',
@@ -44,14 +44,107 @@ class AppTranslations {
 
 class DefaultMediaLibrary {
   static final List<Map<String, dynamic>> tiktokGiftsCatalog = [
-    {'id': 'g1', 'name': 'Rosa (Rose)', 'coins': 1, 'enabled': true, 'gif': 'https://giphy.com', 'sound': 'https://google.com'},
-    {'id': 'g2', 'name': 'TikTok / GG', 'coins': 1, 'enabled': true, 'gif': 'https://giphy.com', 'sound': 'https://google.com'},
-    {'id': 'g3', 'name': 'Coração com Dedos', 'coins': 5, 'enabled': true, 'gif': 'https://giphy.com', 'sound': 'https://google.com'},
-    {'id': 'g4', 'name': 'Perfume / Rosa Ouro', 'coins': 20, 'enabled': true, 'gif': 'https://giphy.com', 'sound': 'https://google.com'},
-    {'id': 'g5', 'name': 'Coroa Imperial', 'coins': 99, 'enabled': true, 'gif': 'https://giphy.com', 'sound': 'https://google.com'},
-    {'id': 'g6', 'name': 'Chuva de Dinheiro', 'coins': 500, 'enabled': true, 'gif': 'https://giphy.com', 'sound': 'https://google.com'},
-    {'id': 'g7', 'name': 'Foguete Espacial', 'coins': 2000, 'enabled': true, 'gif': 'https://giphy.com', 'sound': 'https://google.com'},
-    {'id': 'g8', 'name': 'Leão Rei (Lion)', 'coins': 29999, 'enabled': true, 'gif': 'https://giphy.com', 'sound': 'https://google.com'},
+    {
+      'id': 'g1',
+      'name': 'Rosa (Rose)',
+      'coins': 1,
+      'enabled': true,
+      'ttsThank': true,
+      'customVoicePath': null,
+      'png': 'https://flaticon.com',
+      'sound': 'https://google.com',
+    },
+    {
+      'id': 'g2',
+      'name': 'TikTok / GG',
+      'coins': 1,
+      'enabled': true,
+      'ttsThank': true,
+      'customVoicePath': null,
+      'png': 'https://flaticon.com',
+      'sound': 'https://google.com',
+    },
+    {
+      'id': 'g3',
+      'name': 'Coração com Dedos',
+      'coins': 5,
+      'enabled': true,
+      'ttsThank': true,
+      'customVoicePath': null,
+      'png': 'https://flaticon.com',
+      'sound': 'https://google.com',
+    },
+    {
+      'id': 'g4',
+      'name': 'Perfume',
+      'coins': 20,
+      'enabled': true,
+      'ttsThank': true,
+      'customVoicePath': null,
+      'png': 'https://flaticon.com',
+      'sound': 'https://google.com',
+    },
+    {
+      'id': 'g5',
+      'name': 'Coroa Imperial',
+      'coins': 99,
+      'enabled': true,
+      'ttsThank': true,
+      'customVoicePath': null,
+      'png': 'https://flaticon.com',
+      'sound': 'https://google.com',
+    },
+    {
+      'id': 'g6',
+      'name': 'Chuva de Dinheiro',
+      'coins': 500,
+      'enabled': true,
+      'ttsThank': true,
+      'customVoicePath': null,
+      'png': 'https://flaticon.com',
+      'sound': 'https://google.com',
+    },
+    {
+      'id': 'g7',
+      'name': 'Foguete Espacial',
+      'coins': 2000,
+      'enabled': true,
+      'ttsThank': true,
+      'customVoicePath': null,
+      'png': 'https://flaticon.com',
+      'sound': 'https://google.com',
+    },
+    {
+      'id': 'g8',
+      'name': 'Leão Rei (Lion)',
+      'coins': 29999,
+      'enabled': true,
+      'ttsThank': true,
+      'customVoicePath': null,
+      'png': 'https://flaticon.com',
+      'sound': 'https://google.com',
+    },
+  ];
+
+  static final List<Map<String, dynamic>> fullTikTokPngSelectableList = [
+    {'name': 'Rosa (Rose)', 'coins': 1, 'png': 'https://flaticon.com'},
+    {'name': 'TikTok', 'coins': 1, 'png': 'https://flaticon.com'},
+    {'name': 'GG', 'coins': 1, 'png': 'https://flaticon.com'},
+    {'name': 'Coração', 'coins': 5, 'png': 'https://flaticon.com'},
+    {'name': 'Café Espresso', 'coins': 10, 'png': 'https://flaticon.com'},
+    {'name': 'Perfume', 'coins': 20, 'png': 'https://flaticon.com'},
+    {'name': 'Doughnut', 'coins': 30, 'png': 'https://flaticon.com'},
+    {'name': 'Coroa', 'coins': 99, 'png': 'https://flaticon.com'},
+    {'name': 'Chapéu Cowboy', 'coins': 100, 'png': 'https://flaticon.com'},
+    {'name': 'Óculos Sol VIP', 'coins': 199, 'png': 'https://flaticon.com'},
+    {'name': 'Troféu Campeão', 'coins': 299, 'png': 'https://flaticon.com'},
+    {'name': 'Chuva de Dinheiro', 'coins': 500, 'png': 'https://flaticon.com'},
+    {'name': 'Diamante Azul', 'coins': 1000, 'png': 'https://flaticon.com'},
+    {'name': 'Foguete Espacial', 'coins': 2000, 'png': 'https://flaticon.com'},
+    {'name': 'Carro Desportivo', 'coins': 5000, 'png': 'https://flaticon.com'},
+    {'name': 'Castelo Real', 'coins': 10000, 'png': 'https://flaticon.com'},
+    {'name': 'Leão Rei (Lion)', 'coins': 29999, 'png': 'https://flaticon.com'},
+    {'name': 'Universo TikTok', 'coins': 34999, 'png': 'https://flaticon.com'},
   ];
 
   static final List<Map<String, String>> builtInSounds = [
@@ -62,104 +155,73 @@ class DefaultMediaLibrary {
     {'name': 'Tambor Suspense', 'url': 'https://google.com'},
     {'name': 'Foguetes Festa', 'url': 'https://google.com'},
     {'name': 'Laser Sci-Fi', 'url': 'https://google.com'},
-    {'name': 'Level Up / Power', 'url': 'https://google.com'},
+    {'name': 'Level Up / Pop', 'url': 'https://google.com'},
   ];
 
-  static final List<Map<String, String>> builtInGifs = [
-    {'name': 'Chuva de Moedas', 'url': 'https://giphy.com'},
-    {'name': 'Leão Rugindo', 'url': 'https://giphy.com'},
-    {'name': 'Rosa Brilhante', 'url': 'https://giphy.com'},
-    {'name': 'Festa Néon', 'url': 'https://giphy.com'},
-    {'name': 'GG Vitória', 'url': 'https://giphy.com'},
-    {'name': 'Novo Seguidor', 'url': 'https://giphy.com'},
-    {'name': 'Coração Explodir', 'url': 'https://giphy.com'},
-    {'name': 'Fogo Azul', 'url': 'https://giphy.com'},
+  static final List<Map<String, String>> builtInGifsAndPngs = [
+    {'name': 'Chuva de Moedas (GIF)', 'url': 'https://giphy.com'},
+    {'name': 'Leão Rugindo (GIF)', 'url': 'https://giphy.com'},
+    {'name': 'Rosa Brilhante (GIF)', 'url': 'https://giphy.com'},
+    {'name': 'Festa Néon (GIF)', 'url': 'https://giphy.com'},
+    {'name': 'GG Vitória (GIF)', 'url': 'https://giphy.com'},
+    {'name': 'Novo Seguidor (GIF)', 'url': 'https://giphy.com'},
+    {'name': 'Coroa Dourada (PNG)', 'url': 'https://flaticon.com'},
+    {'name': 'Troféu VIP (PNG)', 'url': 'https://flaticon.com'},
+    {'name': 'Diamante Azul (PNG)', 'url': 'https://flaticon.com'},
+    {'name': 'Fogo Épico (PNG)', 'url': 'https://flaticon.com'},
   ];
 
-  static final List<Map<String, dynamic>> wheelTemplates = [
-    {
-      'name': 'Desafios Gaming Pro',
-      'theme': 'neon',
-      'items': ['10 Flexões', 'Sem Mira 1 Ronda', 'Só Pistola', 'Jogar Invertido', 'Sensibilidade Máxima', 'Vitória Obrigatória']
-    },
-    {
-      'name': 'Interação com o Chat',
-      'theme': 'fire',
-      'items': ['Escolher Música', 'Salve Especial', 'Seguir de Volta', 'Mod por 10 Min', 'Responder Verdade', 'Dupla na Próxima']
-    },
-    {
-      'name': 'Prémios & Sorteios',
-      'theme': 'toxic',
-      'items': ['VIP no Canal', 'Destaque na Live', 'Escolha o Jogo', 'Desafio Surpresa', 'Roda Novamente', 'Grande Prémio!']
-    },
+  static final List<Map<String, String>> royaltyFreeMusicRepo = [
+    {'title': 'Lo-Fi Chill Café (Sem Copyright)', 'artist': 'HELL Beats', 'url': 'https://google.com'},
+    {'title': 'Cyberpunk Synth Wave', 'artist': 'Néon Studio', 'url': 'https://google.com'},
+    {'title': 'Arena Gaming Bass', 'artist': 'Pro Stream Audio', 'url': 'https://google.com'},
+    {'title': 'Night Rain Relax', 'artist': 'Ambient Free', 'url': 'https://google.com'},
+    {'title': 'Victory Celebration Loop', 'artist': 'Streamers Hub', 'url': 'https://google.com'},
   ];
 
   static final List<Map<String, dynamic>> tikfinityOverlayCategories = [
     {
       'category': 'Overlays de Meta',
       'items': [
-        {'name': 'Meta de Likes (Likes Goal)', 'desc': 'Barra de progresso animada para likes da live', 'scene': 'goal_likes'},
-        {'name': 'Meta de Seguidores (Follows Goal)', 'desc': 'Contador visual para novos seguidores', 'scene': 'goal_follows'},
-        {'name': 'Meta de Espectadores (Viewer Count)', 'desc': 'Mostra o pico de audiência em tempo real', 'scene': 'goal_viewers'},
-        {'name': 'Meta de Moedas (Coins Earned)', 'desc': 'Progresso total de diamantes e moedas', 'scene': 'goal_coins'},
-        {'name': 'Meta de Subscritores (New Sub)', 'desc': 'Barra dedicada a novos assinantes', 'scene': 'goal_subs'},
+        {'name': 'Meta de Likes (Likes Goal)', 'desc': 'Barra de progresso animada para likes da live', 'scene': 'goal_likes', 'previewType': 'bar'},
+        {'name': 'Meta de Seguidores (Follows Goal)', 'desc': 'Contador visual para novos seguidores', 'scene': 'goal_follows', 'previewType': 'bar'},
+        {'name': 'Meta de Espectadores (Viewer Count)', 'desc': 'Mostra o pico de audiência em tempo real', 'scene': 'goal_viewers', 'previewType': 'bar'},
+        {'name': 'Meta de Moedas (Coins Earned)', 'desc': 'Progresso total de diamantes e moedas', 'scene': 'goal_coins', 'previewType': 'bar'},
+        {'name': 'Meta de Subscritores (New Sub)', 'desc': 'Barra dedicada a novos assinantes', 'scene': 'goal_subs', 'previewType': 'bar'},
       ]
     },
     {
       'category': 'Overlay de Meta com Contagem Regressiva',
       'items': [
-        {'name': 'Countdown Likes', 'desc': 'Meta de likes com relógio decrescente', 'scene': 'cd_likes'},
-        {'name': 'Countdown Follows', 'desc': 'Meta de seguidores com cronómetro', 'scene': 'cd_follows'},
-        {'name': 'Countdown Viewer Count', 'desc': 'Desafio de audiência contra o relógio', 'scene': 'cd_viewers'},
-        {'name': 'Countdown Coins Earned', 'desc': 'Subathon / Desafio de moedas com tempo', 'scene': 'cd_coins'},
-        {'name': 'Countdown New Sub', 'desc': 'Contagem regressiva para novos subs', 'scene': 'cd_subs'},
+        {'name': 'Countdown Likes', 'desc': 'Meta de likes com relógio decrescente', 'scene': 'cd_likes', 'previewType': 'timer'},
+        {'name': 'Countdown Follows', 'desc': 'Meta de seguidores com cronómetro', 'scene': 'cd_follows', 'previewType': 'timer'},
+        {'name': 'Countdown Viewer Count', 'desc': 'Desafio de audiência contra o relógio', 'scene': 'cd_viewers', 'previewType': 'timer'},
+        {'name': 'Countdown Coins Earned', 'desc': 'Subathon / Desafio de moedas com tempo', 'scene': 'cd_coins', 'previewType': 'timer'},
+        {'name': 'Countdown New Sub', 'desc': 'Contagem regressiva para novos subs', 'scene': 'cd_subs', 'previewType': 'timer'},
       ]
     },
     {
       'category': 'Widgets Interativos & Sociais',
       'items': [
-        {'name': 'Overlay da Roleta (Wheel)', 'desc': 'Exibe a roleta giratória em direto no OBS/Studio', 'scene': 'wheel'},
-        {'name': 'Rotador de Redes Sociais', 'desc': 'Alterna automaticamente Instagram, Discord, YouTube e TikTok', 'scene': 'social_rotator'},
-        {'name': 'Contagem de Seguidores Ao Vivo', 'desc': 'Contador digital em tempo real com animação', 'scene': 'follower_counter'},
+        {'name': 'Overlay da Roleta (Wheel)', 'desc': 'Exibe a roleta giratória em direto no OBS/Studio', 'scene': 'wheel', 'previewType': 'wheel'},
+        {'name': 'Rotador de Redes Sociais', 'desc': 'Alterna automaticamente Instagram, Discord, YouTube e TikTok', 'scene': 'social_rotator', 'previewType': 'social'},
+        {'name': 'Contagem de Seguidores Ao Vivo', 'desc': 'Contador digital em tempo real com animação', 'scene': 'follower_counter', 'previewType': 'counter'},
       ]
     },
     {
       'category': 'Overlays de Presentes & Ranking',
       'items': [
-        {'name': 'Top Gift (Maior Presente)', 'desc': 'Destaca o utilizador que enviou o presente mais valioso', 'scene': 'top_gift'},
-        {'name': 'Top Streak (Mais Presentes)', 'desc': 'Destaca quem enviou a maior sequência de presentes', 'scene': 'top_streak'},
+        {'name': 'Top Gift (Maior Presente)', 'desc': 'Destaca o utilizador que enviou o presente mais valioso', 'scene': 'top_gift', 'previewType': 'podium'},
+        {'name': 'Top Streak (Mais Presentes)', 'desc': 'Destaca quem enviou a maior sequência de presentes', 'scene': 'top_streak', 'previewType': 'podium'},
       ]
     },
     {
       'category': 'Overlays Gráficos & Câmara',
       'items': [
-        {'name': 'Webcam Frames (Molduras Câmara)', 'desc': 'Moldura néon iluminada para a tua câmara', 'scene': 'cam_frame'},
-        {'name': 'Overlays Completos HUD', 'desc': 'Layout completo de ecrã para gaming e conversa', 'scene': 'live'},
-        {'name': 'Chat Banners', 'desc': 'Faixa elegante para destacar mensagens do chat na tela', 'scene': 'chat_banner'},
+        {'name': 'Webcam Frames (Molduras Câmara)', 'desc': 'Moldura néon iluminada para a tua câmara', 'scene': 'cam_frame', 'previewType': 'frame'},
+        {'name': 'Overlays Completos HUD', 'desc': 'Layout completo de ecrã para gaming e conversa', 'scene': 'live', 'previewType': 'frame'},
+        {'name': 'Chat Banners', 'desc': 'Faixa elegante para destacar mensagens do chat na tela', 'scene': 'chat_banner', 'previewType': 'banner'},
       ]
     },
   ];
-
-  static List<Map<String, dynamic>> generate1119GiftsDatabase() {
-    final baseNames = [
-      'Rosa', 'TikTok', 'GG', 'Coração', 'Perfume', 'Coroa', 'Chuva de Dinheiro', 'Foguete', 'Leão',
-      'Universo', 'Carro Desportivo', 'Fénix', 'Dragão', 'Castelo', 'Iate', 'Planeta', 'Diamante',
-      'Troféu', 'Microfone Ouro', 'Panda', 'Gato Ninja', 'Cão Astronauta', 'Fogo Azul', 'Raio Néon',
-      'Estrela Cadente', 'Pizza', 'Café', 'Gelado', 'Bolo Festa', 'Balão', 'Confetti', 'Guitarra',
-      'Auscultadores', 'Comando Pro', 'Óculos VR', 'Ninja', 'Samurai', 'Cavaleiro', 'Rei', 'Rainha'
-    ];
-    final gifs = builtInGifs.map((g) => g['url']!).toList();
-    return List.generate(1119, (i) {
-      final base = baseNames[i % baseNames.length];
-      final tier = (i ~/ baseNames.length) + 1;
-      final coins = (i == 0) ? 1 : ((i % 50) + 1) * (tier > 5 ? 10 : 1);
-      return {
-        'id': 'tk_gift_${i + 1}',
-        'number': i + 1,
-        'name': tier == 1 ? base : '$base Pro #$tier',
-        'coins': coins,
-        'gif': gifs[i % gifs.length],
-      };
-    });
-  }
 }
