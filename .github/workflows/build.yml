@@ -77,7 +77,7 @@ jobs:
         with:
           channel: 'stable'
       - name: Preparar Windows, Aplicar Ícone e Compilar EXE
-                run: |
+      run: |
           flutter create --platforms=windows --project-name hell_live .
           flutter pub get
           dart run flutter_launcher_icons
