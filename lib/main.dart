@@ -1962,7 +1962,7 @@ class _MainShellState extends State<MainShell> {
       const AboutHellLiveScreen(),
       _buildSettingsTab(),
       MusicBackgroundScreen(bgPlayer: bgMusicPlayer),
-      const HelpFaqAndContactScreen(),
+      HelpFaqAndContactScreen(),
       ProfilePrivacySecurityScreen(user: widget.user, onUserUpdated: widget.onUserUpdated, onLogout: widget.onLogout),
     ];
 
