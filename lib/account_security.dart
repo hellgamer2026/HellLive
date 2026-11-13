@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:local_auth/local_auth.dart';
@@ -13,6 +14,23 @@ class UserAccountManager {
     final raw = prefs.getString('hell_user_profile');
     if (raw == null) return null;
     return Map<String, dynamic>.from(jsonDecode(raw));
+  }
+
+  static Future<List<Map<String, String>>> getSavedCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('hell_saved_credentials');
+    if (raw == null) return [];
+    final list = jsonDecode(raw) as List;
+    return list.map((e) => Map<String, String>.from(e)).toList();
+  }
+
+  static Future<void> saveCredentials(String email, String username, String password) async {
+    if (password.isEmpty) return;
+    final prefs = await SharedPreferences.getInstance();
+    final current = await getSavedCredentials();
+    current.removeWhere((c) => c['email'] == email || c['username'] == username);
+    current.insert(0, {'email': email, 'username': username, 'password': password});
+    await prefs.setString('hell_saved_credentials', jsonEncode(current));
   }
 
   static Future<void> saveUser(Map<String, dynamic> user) async {
@@ -69,21 +87,24 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
   late AnimationController _pulseCtrl;
   bool _isRegister = false;
   bool _obscurePass = true;
+  bool _rememberPassword = true;
+  List<Map<String, String>> _savedAccounts = [];
 
-  final TextEditingController _firstNameCtrl = TextEditingController();
-  final TextEditingController _lastNameCtrl = TextEditingController();
   final TextEditingController _nickCtrl = TextEditingController();
-  final TextEditingController _emailCtrl = TextEditingController();
+  final TextEditingController _identifierCtrl = TextEditingController();
   final TextEditingController _passCtrl = TextEditingController();
   final TextEditingController _phoneCtrl = TextEditingController();
-  final TextEditingController _countryCtrl = TextEditingController();
-  final TextEditingController _cityCtrl = TextEditingController();
-  final TextEditingController _addressCtrl = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _pulseCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 2))..repeat(reverse: true);
+    _loadSavedAccounts();
+  }
+
+  Future<void> _loadSavedAccounts() async {
+    final list = await UserAccountManager.getSavedCredentials();
+    if (mounted) setState(() => _savedAccounts = list);
   }
 
   @override
@@ -92,14 +113,23 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
     super.dispose();
   }
 
-  Future<void> _signInWithGoogleAndAutoRegister() async {
+  // Registo 1-Clique com Conta Google (Sem preenchimento manual)
+  Future<void> _quickGoogleSignIn() async {
+    String? chosenEmail;
+    String? chosenName;
+
     try {
       final googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
       await googleSignIn.signOut();
       final account = await googleSignIn.signIn();
-      if (account == null || !mounted) return;
+      if (account != null) {
+        chosenEmail = account.email;
+        chosenName = account.displayName ?? account.email.split('@').first;
+      }
+    } catch (_) {}
 
-      // Diálogo de Partilha de Informações & Confirmação de Identidade
+    if (chosenEmail == null && mounted) {
+      final quickEmailCtrl = TextEditingController();
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
@@ -107,23 +137,20 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: const BorderSide(color: Color(0xFF38BDF8))),
           title: const Row(
             children: [
-              Icon(Icons.verified_user, color: Color(0xFF38BDF8)),
+              Icon(Icons.account_circle, color: Color(0xFF38BDF8)),
               SizedBox(width: 8),
-              Expanded(child: Text('Partilha de Informações Google', style: TextStyle(fontSize: 15.5))),
+              Expanded(child: Text('Registo Rápido Conta Google', style: TextStyle(fontSize: 16))),
             ],
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Confirmas que és ${account.displayName ?? account.email}?', style: const TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              Text('• Email: ${account.email}', style: const TextStyle(fontSize: 12.5, color: Colors.white70)),
-              Text('• Nome: ${account.displayName ?? 'Criador Google'}', style: const TextStyle(fontSize: 12.5, color: Colors.white70)),
+              const Text('Seleciona ou escreve o teu email Google para entrar e guardar o registo automaticamente:', style: TextStyle(fontSize: 12, color: Colors.white70)),
               const SizedBox(height: 10),
-              const Text(
-                'O teu pré-registo será preenchido automaticamente e entrarás direto na app. Poderás completar dados opcionais mais tarde no teu Perfil.',
-                style: TextStyle(fontSize: 11.5, color: Color(0xFF7DD3FC)),
+              TextField(
+                controller: quickEmailCtrl,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(labelText: 'teuemail@gmail.com', prefixIcon: Icon(Icons.email_outlined), isDense: true),
               ),
             ],
           ),
@@ -132,20 +159,29 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF)),
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Confirmar e Entrar', style: TextStyle(color: Colors.white)),
+              child: const Text('Entrar Agora', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
       );
+      if (confirmed == true && quickEmailCtrl.text.trim().isNotEmpty) {
+        chosenEmail = quickEmailCtrl.text.trim();
+        chosenName = chosenEmail!.split('@').first;
+      }
+    }
 
-      if (confirmed == true) {
-        final parts = (account.displayName ?? '').split(' ');
-        final user = {
-          'firstName': parts.isNotEmpty && parts.first.isNotEmpty ? parts.first : 'Criador',
+    if (chosenEmail == null || !mounted) return;
+
+    final existing = await UserAccountManager.getSavedUser();
+    final parts = (chosenName ?? 'Criador').split(' ');
+    final user = existing ??
+        {
+          'firstName': parts.first,
           'lastName': parts.length > 1 ? parts.sublist(1).join(' ') : '',
-          'nickname': account.displayName ?? account.email.split('@').first,
-          'email': account.email,
+          'nickname': chosenName ?? chosenEmail!.split('@').first,
+          'email': chosenEmail,
           'phone': '',
+          'phoneAlertsEnabled': false,
           'country': '',
           'city': '',
           'address': '',
@@ -166,43 +202,120 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
           'passwordSecret': '',
           'patternSecret': '',
         };
-        await UserAccountManager.saveUser(user);
-        widget.onAuthenticated(user);
-      }
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Não foi possível abrir o seletor Google neste dispositivo. Usa email ou cria registo abaixo.')),
-        );
-      }
+
+    user['email'] = chosenEmail;
+    user['provider'] = 'google';
+
+    if (user['phoneAlertsEnabled'] == true && (user['phone'] ?? '').toString().isNotEmpty) {
+      final allowed = await _verifyNewDeviceByPhoneAlert(user['phone'].toString());
+      if (!allowed) return;
     }
+
+    await UserAccountManager.saveUser(user);
+    widget.onAuthenticated(user);
   }
 
-  void _completeManualLogin() async {
-    if (_emailCtrl.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Insere o teu email para continuar.')));
+  // Alerta SMS no Telemóvel com opção direta: "Sim, sou eu (Aceitar)" ou "Não sou eu (Rejeitar)"
+  Future<bool> _verifyNewDeviceByPhoneAlert(String phone) async {
+    final code = (100000 + Random().nextInt(900000)).toString();
+    final smsUri = Uri.parse('sms:$phone?body=${Uri.encodeComponent("HELL LIVE SEGURANÇA: Novo acesso detetado na tua conta. Código: $code. Confirma na app: Sim, sou eu / Não sou eu.")}');
+    try {
+      await launchUrl(smsUri, mode: LaunchMode.externalApplication);
+    } catch (_) {}
+
+    if (!mounted) return false;
+    final codeCtrl = TextEditingController();
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF0B1636),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: const BorderSide(color: Colors.amberAccent, width: 1.5)),
+        title: const Row(
+          children: [
+            Icon(Icons.security_update_warning_rounded, color: Colors.amberAccent),
+            SizedBox(width: 8),
+            Expanded(child: Text('Alerta de Segurança · Novo Dispositivo', style: TextStyle(fontSize: 15.5))),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Enviámos uma mensagem de alerta para o número $phone.', style: const TextStyle(fontSize: 12.5, color: Colors.white70)),
+            const SizedBox(height: 8),
+            Text('Código SMS: $code', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8))),
+            const SizedBox(height: 10),
+            TextField(
+              controller: codeCtrl,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Código SMS (Opcional)', isDense: true, border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 14),
+            const Text('Foste tu que iniciaste esta sessão?', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+          ],
+        ),
+        actions: [
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () => Navigator.pop(ctx, false),
+            icon: const Icon(Icons.block, size: 17, color: Colors.white),
+            label: const Text('Não sou eu (Rejeitar)', style: TextStyle(color: Colors.white, fontSize: 12)),
+          ),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            onPressed: () {
+              if (codeCtrl.text.trim().isEmpty || codeCtrl.text.trim() == code) {
+                Navigator.pop(ctx, true);
+              }
+            },
+            icon: const Icon(Icons.check_circle, size: 17, color: Colors.white),
+            label: const Text('Sim, sou eu (Aceitar)', style: TextStyle(color: Colors.white, fontSize: 12)),
+          ),
+        ],
+      ),
+    );
+    return result == true;
+  }
+
+  void _completeLoginOrRegister() async {
+    final idText = _identifierCtrl.text.trim();
+    if (idText.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Insere o teu email ou nome de utilizador.')));
       return;
     }
+
     final existing = await UserAccountManager.getSavedUser();
     if (!_isRegister && existing != null) {
+      if (existing['phoneAlertsEnabled'] == true && (existing['phone'] ?? '').toString().isNotEmpty) {
+        final ok = await _verifyNewDeviceByPhoneAlert(existing['phone'].toString());
+        if (!ok) return;
+      }
+      if (_rememberPassword) {
+        await UserAccountManager.saveCredentials(existing['email'] ?? idText, existing['nickname'] ?? idText, _passCtrl.text.trim());
+      }
       widget.onAuthenticated(existing);
       return;
     }
 
-    final fullName = '${_firstNameCtrl.text.trim()} ${_lastNameCtrl.text.trim()}'.trim();
-    final nick = _nickCtrl.text.trim().isEmpty
-        ? (fullName.isEmpty ? _emailCtrl.text.trim().split('@').first : fullName)
-        : _nickCtrl.text.trim();
+    final isEmail = idText.contains('@');
+    final email = isEmail ? idText : '$idText@helllive.app';
+    final nick = _nickCtrl.text.trim().isEmpty ? (isEmail ? idText.split('@').first : idText) : _nickCtrl.text.trim();
+
+    if (_rememberPassword) {
+      await UserAccountManager.saveCredentials(email, nick, _passCtrl.text.trim());
+    }
 
     final user = {
-      'firstName': _firstNameCtrl.text.trim().isEmpty ? 'Criador' : _firstNameCtrl.text.trim(),
-      'lastName': _lastNameCtrl.text.trim(),
+      'firstName': nick,
+      'lastName': '',
       'nickname': nick,
-      'email': _emailCtrl.text.trim(),
+      'email': email,
       'phone': _phoneCtrl.text.trim(),
-      'country': _countryCtrl.text.trim(),
-      'city': _cityCtrl.text.trim(),
-      'address': _addressCtrl.text.trim(),
+      'phoneAlertsEnabled': _phoneCtrl.text.trim().isNotEmpty,
+      'country': '',
+      'city': '',
+      'address': '',
       'discord': '',
       'whatsapp': '',
       'provider': 'email',
@@ -217,7 +330,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
       'publicStats': true,
       'securityMethods': <String>[],
       'pinSecret': '',
-      'passwordSecret': '',
+      'passwordSecret': _passCtrl.text.trim(),
       'patternSecret': '',
     };
     await UserAccountManager.saveUser(user);
@@ -233,14 +346,14 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 460),
+              constraints: const BoxConstraints(maxWidth: 440),
               child: Column(
                 children: [
                   AnimatedBuilder(
                     animation: _pulseCtrl,
                     builder: (_, __) => Container(
-                      width: 96,
-                      height: 96,
+                      width: 92,
+                      height: 92,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         boxShadow: [
@@ -251,25 +364,43 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                           ),
                         ],
                       ),
-                      child: Image.asset('icon.png', fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.local_fire_department, size: 72, color: Color(0xFF38BDF8))),
+                      child: Image.asset('icon.png', fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.local_fire_department, size: 70, color: Color(0xFF38BDF8))),
                     ),
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 12),
                   const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text('HELL ', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: 3, color: Colors.white)),
-                      Text('Live', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800, letterSpacing: 1.5, color: Color(0xFF38BDF8))),
+                      Text('LIVE', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: 2, color: Color(0xFF38BDF8))),
                     ],
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    _isRegister ? 'Cria o teu perfil oficial de criador' : 'Inicia sessão na tua conta HELL Live',
-                    style: const TextStyle(color: Colors.white70, fontSize: 13.5),
+                  const SizedBox(height: 18),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black87,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      onPressed: _quickGoogleSignIn,
+                      icon: const Icon(Icons.g_mobiledata, size: 28, color: Colors.redAccent),
+                      label: const Text('Continuar / Registar com Conta Google', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
+                  const Row(
+                    children: [
+                      Expanded(child: Divider(color: Colors.white24)),
+                      Padding(padding: EdgeInsets.symmetric(horizontal: 10), child: Text('ou com email / nome de utilizador', style: TextStyle(fontSize: 11.5, color: Colors.white54))),
+                      Expanded(child: Divider(color: Colors.white24)),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
                   Container(
-                    padding: const EdgeInsets.all(18),
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(colors: [Color(0xFF0E1D47), Color(0xFF08112B)]),
                       borderRadius: BorderRadius.circular(18),
@@ -278,36 +409,44 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                     child: Column(
                       children: [
                         if (_isRegister) ...[
-                          Row(
-                            children: [
-                              Expanded(child: TextField(controller: _firstNameCtrl, decoration: const InputDecoration(labelText: 'Nome *', isDense: true))),
-                              const SizedBox(width: 8),
-                              Expanded(child: TextField(controller: _lastNameCtrl, decoration: const InputDecoration(labelText: 'Apelido *', isDense: true))),
-                            ],
-                          ),
+                          TextField(controller: _nickCtrl, decoration: const InputDecoration(labelText: 'Nome de Utilizador', prefixIcon: Icon(Icons.person_outline), isDense: true)),
                           const SizedBox(height: 10),
-                          TextField(controller: _nickCtrl, decoration: const InputDecoration(labelText: 'Nome de Criador / Nickname *', prefixIcon: Icon(Icons.alternate_email), isDense: true)),
-                          const SizedBox(height: 10),
-                          TextField(controller: _phoneCtrl, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Contacto Telefónico', prefixIcon: Icon(Icons.phone_outlined), isDense: true)),
-                          const SizedBox(height: 10),
-                          Row(
-                            children: [
-                              Expanded(child: TextField(controller: _countryCtrl, decoration: const InputDecoration(labelText: 'País / Região', isDense: true))),
-                              const SizedBox(width: 8),
-                              Expanded(child: TextField(controller: _cityCtrl, decoration: const InputDecoration(labelText: 'Cidade', isDense: true))),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          TextField(controller: _addressCtrl, decoration: const InputDecoration(labelText: 'Morada Completa (Opcional)', prefixIcon: Icon(Icons.home_outlined), isDense: true)),
+                          TextField(controller: _phoneCtrl, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Telemóvel para Alertas de Conexão (Opcional)', prefixIcon: Icon(Icons.phone_android), isDense: true)),
                           const SizedBox(height: 10),
                         ],
-                        TextField(controller: _emailCtrl, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'Email *', prefixIcon: Icon(Icons.email_outlined), isDense: true)),
+                        Autocomplete<Map<String, String>>(
+                          optionsBuilder: (TextEditingValue textValue) {
+                            if (textValue.text.isEmpty) return const Iterable<Map<String, String>>.empty();
+                            final q = textValue.text.toLowerCase();
+                            return _savedAccounts.where((acc) =>
+                                (acc['email'] ?? '').toLowerCase().startsWith(q) || (acc['username'] ?? '').toLowerCase().startsWith(q));
+                          },
+                          displayStringForOption: (opt) => opt['email'] ?? opt['username'] ?? '',
+                          onSelected: (selection) {
+                            setState(() {
+                              _identifierCtrl.text = selection['email'] ?? selection['username'] ?? '';
+                              _passCtrl.text = selection['password'] ?? '';
+                            });
+                          },
+                          fieldViewBuilder: (ctx, fieldCtrl, focusNode, onSubmit) {
+                            fieldCtrl.addListener(() => _identifierCtrl.text = fieldCtrl.text);
+                            return TextField(
+                              controller: fieldCtrl,
+                              focusNode: focusNode,
+                              decoration: const InputDecoration(
+                                labelText: 'Email ou Nome de Utilizador',
+                                prefixIcon: Icon(Icons.alternate_email),
+                                isDense: true,
+                              ),
+                            );
+                          },
+                        ),
                         const SizedBox(height: 10),
                         TextField(
                           controller: _passCtrl,
                           obscureText: _obscurePass,
                           decoration: InputDecoration(
-                            labelText: 'Palavra-passe *',
+                            labelText: 'Palavra-passe',
                             prefixIcon: const Icon(Icons.lock_outline),
                             isDense: true,
                             suffixIcon: IconButton(
@@ -316,53 +455,31 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                             ),
                           ),
                         ),
-                        const SizedBox(height: 18),
+                        CheckboxListTile(
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                          activeColor: const Color(0xFF1E78FF),
+                          title: const Text('Guardar registo e palavra-passe para acesso rápido', style: TextStyle(fontSize: 12)),
+                          value: _rememberPassword,
+                          onChanged: (v) => setState(() => _rememberPassword = v ?? true),
+                        ),
+                        const SizedBox(height: 8),
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF), padding: const EdgeInsets.symmetric(vertical: 14)),
-                            onPressed: _completeManualLogin,
-                            child: Text(_isRegister ? 'Registar & Entrar' : 'Entrar na Conta', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF), padding: const EdgeInsets.symmetric(vertical: 13)),
+                            onPressed: _completeLoginOrRegister,
+                            child: Text(_isRegister ? 'Criar Conta & Guardar' : 'Entrar na Conta', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                           ),
-                        ),
-                        const SizedBox(height: 14),
-                        const Row(
-                          children: [
-                            Expanded(child: Divider(color: Colors.white24)),
-                            Padding(padding: EdgeInsets.symmetric(horizontal: 10), child: Text('ou entrar rapidamente com', style: TextStyle(fontSize: 11.5, color: Colors.white54))),
-                            Expanded(child: Divider(color: Colors.white24)),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 11), side: const BorderSide(color: Colors.white24)),
-                                onPressed: _signInWithGoogleAndAutoRegister,
-                                icon: const Icon(Icons.g_mobiledata, size: 24, color: Colors.redAccent),
-                                label: const Text('Google', style: TextStyle(color: Colors.white)),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 11), side: const BorderSide(color: Colors.white24)),
-                                onPressed: () => setState(() => _isRegister = true),
-                                icon: const Icon(Icons.apple, size: 22, color: Colors.white),
-                                label: const Text('Apple / iOS', style: TextStyle(color: Colors.white)),
-                              ),
-                            ),
-                          ],
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   TextButton(
                     onPressed: () => setState(() => _isRegister = !_isRegister),
                     child: Text(
-                      _isRegister ? 'Já tens conta? Iniciar Sessão' : 'Ainda não tens conta? Criar Registo Completo',
+                      _isRegister ? 'Já tens conta? Iniciar Sessão' : 'Criar novo registo',
                       style: const TextStyle(color: Color(0xFF38BDF8)),
                     ),
                   ),
