@@ -456,41 +456,66 @@ class _MainShellState extends State<MainShell> {
   }
 
   Future<void> _speakRealVoice(String text) async {
-    if (_isMuted) return;
+    if (_isMuted || text.trim().isEmpty) return;
     final info = _neuralVoices[_selectedVoiceKey]!;
     final neuralName = info['neural']!;
     final isMale = info['gender'] == 'male';
-    final langCode = neuralName.startsWith('pt-BR') ? 'pt-BR' : (neuralName.startsWith('en') ? 'en-US' : (neuralName.startsWith('es') ? 'es-ES' : 'pt-PT'));
+    final langCode = neuralName.startsWith('pt-BR')
+        ? 'pt-BR'
+        : (neuralName.startsWith('en') ? 'en-US' : (neuralName.startsWith('es') ? 'es-ES' : 'pt-PT'));
 
-    await flutterTts.stop();
-    await flutterTts.setLanguage(langCode);
+    try {
+      await flutterTts.stop();
+      await ttsAudioPlayer.stop();
 
-    if (_deviceVoices.isNotEmpty) {
-      final maleKeywords = ['male', 'duarte', 'antonio', 'daniel', 'jfb', 'afs', 'helio', 'guy', 'alvaro', 'man', 'homem', 'masculin', 'pdt', 'ptd'];
-      final femaleKeywords = ['female', 'raquel', 'francisca', 'maria', 'jenny', 'woman', 'mulher', 'feminin', 'ptf'];
-
-      final filtered = _deviceVoices.where((v) {
-        final loc = (v['locale'] ?? '').toString().toLowerCase();
-        final name = (v['name'] ?? '').toString().toLowerCase();
-        if (!loc.contains(langCode.toLowerCase().substring(0, 2))) return false;
-        if (isMale) {
-          return maleKeywords.any((k) => name.contains(k)) && !femaleKeywords.any((k) => name.contains(k));
-        } else {
-          return femaleKeywords.any((k) => name.contains(k));
-        }
-      }).toList();
-
-      if (filtered.isNotEmpty) {
-        await flutterTts.setVoice({'name': filtered.first['name'], 'locale': filtered.first['locale']});
+      // Para vozes femininas Google, usa diretamente o áudio oficial do Google Translate TTS
+      if (!isMale) {
+        final tl = langCode == 'pt-BR' ? 'pt-BR' : (langCode == 'en-US' ? 'en' : (langCode == 'es-ES' ? 'es' : 'pt-PT'));
+        final encoded = Uri.encodeComponent(text.length > 180 ? text.substring(0, 180) : text);
+        final googleUrl = 'https://google.com';
+        await ttsAudioPlayer.setVolume(_voiceVolume);
+        await ttsAudioPlayer.play(UrlSource(googleUrl));
+        return;
       }
-    }
 
-    final appliedPitch = isMale ? (_voicePitch > 0.78 ? 0.55 : _voicePitch) : (_voicePitch < 0.9 ? 1.08 : _voicePitch);
-    await flutterTts.setPitch(appliedPitch);
-    await flutterTts.setVolume(_voiceVolume);
-    await flutterTts.setSpeechRate(_speechRate);
-    await flutterTts.speak(text);
+      // Para vozes masculinas Google, força o motor Google TTS + seleciona voz masculina oficial
+      if (Platform.isAndroid) {
+        await flutterTts.setEngine('com.google.android.tts');
+      }
+      await flutterTts.setLanguage(langCode);
+
+      if (_deviceVoices.isEmpty) {
+        final v = await flutterTts.getVoices;
+        if (v is List) _deviceVoices = v;
+      }
+
+      if (_deviceVoices.isNotEmpty) {
+        final maleTokens = ['male', 'duarte', 'antonio', 'daniel', 'jfb', 'afs', 'helio', 'guy', 'alvaro', 'pdt', 'ptd', 'ptb', 'esd', 'iom', 'iol'];
+        final femaleTokens = ['female', 'raquel', 'francisca', 'maria', 'jenny', 'ptf', 'esf', 'iog'];
+
+        final candidates = _deviceVoices.where((v) {
+          final loc = (v['locale'] ?? '').toString().toLowerCase();
+          final name = (v['name'] ?? '').toString().toLowerCase();
+          final langPrefix = langCode.substring(0, 2).toLowerCase();
+          if (!loc.contains(langPrefix)) return false;
+          return maleTokens.any((k) => name.contains(k)) && !femaleTokens.any((k) => name.contains(k));
+        }).toList();
+
+        if (candidates.isNotEmpty) {
+          await flutterTts.setVoice({'name': candidates.first['name'].toString(), 'locale': candidates.first['locale'].toString()});
+        }
+      }
+
+      await flutterTts.setPitch(_selectedVoiceKey == 'male_pt_grave' ? 0.50 : 0.62);
+      await flutterTts.setVolume(_voiceVolume);
+      await flutterTts.setSpeechRate(_speechRate);
+      await flutterTts.speak(text);
+    } catch (_) {
+      await flutterTts.setPitch(isMale ? 0.55 : 1.08);
+      await flutterTts.speak(text);
+    }
   }
+
 
   Future<void> _toggleMuteState() async {
     setState(() => _isMuted = !_isMuted);
