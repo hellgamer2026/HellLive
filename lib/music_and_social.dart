@@ -1,3 +1,218 @@
+import 'package:flutter/material.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+class MusicBackgroundScreen extends StatefulWidget {
+  final AudioPlayer bgPlayer;
+  const MusicBackgroundScreen({super.key, required this.bgPlayer});
+
+  @override
+  State<MusicBackgroundScreen> createState() => _MusicBackgroundScreenState();
+}
+
+class _MusicBackgroundScreenState extends State<MusicBackgroundScreen> {
+  final TextEditingController _playlistUrlCtrl = TextEditingController();
+  double _volume = 0.35;
+  bool _isPlaying = false;
+  int _currentIndex = 0;
+
+  final List<Map<String, String>> _playlist = [
+    {'title': 'Chill Lo-Fi Stream (Sem Copyright)', 'source': 'https://google.com', 'type': 'url'},
+    {'title': 'Synthwave Cyber Arena', 'source': 'https://google.com', 'type': 'url'},
+  ];
+
+  Future<void> _playCurrent() async {
+    if (_playlist.isEmpty) return;
+    final track = _playlist[_currentIndex];
+    await widget.bgPlayer.setVolume(_volume);
+    await widget.bgPlayer.setReleaseMode(ReleaseMode.loop);
+    if (track['type'] == 'file') {
+      await widget.bgPlayer.play(DeviceFileSource(track['source']!));
+    } else {
+      await widget.bgPlayer.play(UrlSource(track['source']!));
+    }
+    setState(() => _isPlaying = true);
+  }
+
+  Future<void> _pauseMusic() async {
+    await widget.bgPlayer.pause();
+    setState(() => _isPlaying = false);
+  }
+
+  Future<void> _stopMusic() async {
+    await widget.bgPlayer.stop();
+    setState(() => _isPlaying = false);
+  }
+
+  Future<void> _nextTrack() async {
+    if (_playlist.isEmpty) return;
+    setState(() => _currentIndex = (_currentIndex + 1) % _playlist.length);
+    await _playCurrent();
+  }
+
+  Future<void> _pickLocalTracks() async {
+    final res = await FilePicker.platform.pickFiles(type: FileType.audio, allowMultiple: true);
+    if (res != null && res.files.isNotEmpty) {
+      setState(() {
+        for (final f in res.files) {
+          if (f.path != null) {
+            _playlist.add({'title': f.name, 'source': f.path!, 'type': 'file'});
+          }
+        }
+      });
+      if (!_isPlaying) {
+        _currentIndex = _playlist.length - res.files.length;
+        await _playCurrent();
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currentTitle = _playlist.isEmpty ? 'Nenhuma faixa selecionada' : _playlist[_currentIndex]['title']!;
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [Color(0xFF0E1D47), Color(0xFF08112B)]),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFF1E429F)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('🎵 Serviços de Streaming Conectados', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF38BDF8))),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1DB954), padding: const EdgeInsets.symmetric(vertical: 12)),
+                      onPressed: () => launchUrl(Uri.parse('https://spotify.com'), mode: LaunchMode.externalApplication),
+                      icon: const Icon(Icons.music_note, color: Colors.white),
+                      label: const Text('Spotify', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF0000), padding: const EdgeInsets.symmetric(vertical: 12)),
+                      onPressed: () => launchUrl(Uri.parse('https://youtube.com'), mode: LaunchMode.externalApplication),
+                      icon: const Icon(Icons.play_circle_fill, color: Colors.white),
+                      label: const Text('YT Music', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _playlistUrlCtrl,
+                      decoration: const InputDecoration(hintText: 'Colar link de playlist Spotify / YT Music...', isDense: true, border: OutlineInputBorder()),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.open_in_new, color: Color(0xFF38BDF8)),
+                    tooltip: 'Abrir Playlist',
+                    onPressed: () {
+                      final uri = Uri.tryParse(_playlistUrlCtrl.text.trim());
+                      if (uri != null) launchUrl(uri, mode: LaunchMode.externalApplication);
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [Color(0xFF0E1D47), Color(0xFF08112B)]),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFF38BDF8), width: 1.3),
+          ),
+          child: Column(
+            children: [
+              const Text('MÚSICA DE FUNDO NA TRANSMISSÃO', style: TextStyle(fontSize: 10.5, letterSpacing: 2, color: Color(0xFF38BDF8), fontWeight: FontWeight.bold)),
+              const SizedBox(height: 6),
+              Text(currentTitle, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 14),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(iconSize: 38, color: Colors.greenAccent, tooltip: 'Iniciar Música', icon: const Icon(Icons.play_circle_filled), onPressed: _playCurrent),
+                  const SizedBox(width: 10),
+                  IconButton(iconSize: 38, color: Colors.amberAccent, tooltip: 'Pausar', icon: const Icon(Icons.pause_circle_filled), onPressed: _pauseMusic),
+                  const SizedBox(width: 10),
+                  IconButton(iconSize: 38, color: Colors.redAccent, tooltip: 'Encerrar Música', icon: const Icon(Icons.stop_circle), onPressed: _stopMusic),
+                  const SizedBox(width: 10),
+                  IconButton(iconSize: 34, color: const Color(0xFF38BDF8), tooltip: 'Próxima Faixa', icon: const Icon(Icons.skip_next_rounded), onPressed: _nextTrack),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  const Icon(Icons.volume_down, color: Colors.white70),
+                  Expanded(
+                    child: Slider(
+                      value: _volume,
+                      min: 0.0,
+                      max: 1.0,
+                      activeColor: const Color(0xFF38BDF8),
+                      onChanged: (v) async {
+                        setState(() => _volume = v);
+                        await widget.bgPlayer.setVolume(v);
+                      },
+                    ),
+                  ),
+                  Text('${(_volume * 100).round()}%', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF38BDF8))),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('📂 Minhas Músicas & Playlists Locais', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF)),
+              onPressed: _pickLocalTracks,
+              icon: const Icon(Icons.library_music, size: 18, color: Colors.white),
+              label: const Text('+ Carregar MP3', style: TextStyle(color: Colors.white, fontSize: 12)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ..._playlist.asMap().entries.map((e) {
+          final active = e.key == _currentIndex && _isPlaying;
+          return Card(
+            color: active ? const Color(0xFF122B6B) : const Color(0xFF0B1636),
+            child: ListTile(
+              dense: true,
+              leading: Icon(active ? Icons.graphic_eq : Icons.music_note, color: active ? Colors.greenAccent : const Color(0xFF38BDF8)),
+              title: Text(e.value['title'] ?? '', maxLines: 1, overflow: TextOverflow.ellipsis),
+              onTap: () async {
+                setState(() => _currentIndex = e.key);
+                await _playCurrent();
+              },
+            ),
+          );
+        }),
+      ],
+    );
+  }
+}
+
 class CommunitySocialScreen extends StatefulWidget {
   final String serverUrl;
   final Map<String, dynamic> currentUser;
