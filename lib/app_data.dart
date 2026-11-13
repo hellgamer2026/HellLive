@@ -188,7 +188,16 @@ class DefaultMediaLibrary {
     {'name': 'Fogo Épico (PNG)', 'url': 'https://flaticon.com'},
     {'name': 'Dinamite & Bomba (PNG)', 'url': 'https://flaticon.com'},
   ];
-
+ 
+  static final List<Map<String, String>> goalOverlaysCatalog = [
+    {'id': 'ov_rocket', 'name': 'Foguetão Espacial (Sobe até à Lua)', 'type': 'rocket', 'desc': 'Foguetão animado que descola consoante a meta avança'},
+    {'id': 'ov_gas', 'name': 'Bomba de Gasolina Vintage (Tanque)', 'type': 'gas', 'desc': 'Visor clássico de combustível que sobe até 100%'},
+    {'id': 'ov_fuse', 'name': 'Rastilho & Dinamite (Explosão + Fogos)', 'type': 'fuse', 'desc': 'Pavio a arder até rebentar e lançar fogos de artifício'},
+    {'id': 'ov_neon_bar', 'name': 'Barra Néon Cyber (Progresso Clássico)', 'type': 'neon_bar', 'desc': 'Barra iluminada néon azul com contador em tempo real'},
+    {'id': 'ov_subathon', 'name': 'Subathon Countdown (Barra + Relógio)', 'type': 'subathon', 'desc': 'Meta combinada com contagem regressiva para maratonas'},
+    {'id': 'ov_gold_vip', 'name': 'Coroa Ouro VIP (Meta de Apoios)', 'type': 'gold_vip', 'desc': 'Design dourado de luxo com coroa animada'},
+  ];
+ 
   static final List<Map<String, String>> royaltyFreeMusicRepo = [
     {'title': 'Lo-Fi Chill Café (Sem Copyright)', 'artist': 'HELL Beats', 'url': 'https://google.com'},
     {'title': 'Cyberpunk Synth Wave', 'artist': 'Néon Studio', 'url': 'https://google.com'},
