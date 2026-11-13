@@ -10,12 +10,17 @@ import 'package:file_picker/file_picker.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 import 'app_data.dart';
 import 'studio_screens.dart';
 import 'deck_and_community.dart';
 import 'platform_logos.dart';
+import 'account_security.dart';
+import 'music_and_social.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  WakelockPlus.enable();
   runApp(const HellLiveApp());
 }
 
@@ -87,7 +92,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 2400));
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 2200));
     _logoScale = Tween<double>(begin: 0.78, end: 1.0).animate(CurvedAnimation(parent: _controller, curve: const Interval(0.0, 0.45, curve: Curves.easeOutBack)));
     _logoOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _controller, curve: const Interval(0.0, 0.30, curve: Curves.easeIn)));
     _glowRadius = TweenSequence<double>([
@@ -105,16 +110,21 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     _progressWidth = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _controller, curve: const Interval(0.20, 0.95, curve: Curves.easeInOut)));
     _controller.forward();
 
-    Timer(const Duration(milliseconds: 2700), () {
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          PageRouteBuilder(
-            transitionDuration: const Duration(milliseconds: 500),
-            pageBuilder: (_, __, ___) => MainShell(currentTheme: widget.currentTheme, onThemeChanged: widget.onThemeChanged),
-            transitionsBuilder: (_, anim, __, child) => FadeTransition(opacity: anim, child: child),
+    Timer(const Duration(milliseconds: 2400), () async {
+      if (!mounted) return;
+      final savedUser = await UserAccountManager.getSavedUser();
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          transitionDuration: const Duration(milliseconds: 450),
+          pageBuilder: (_, __, ___) => AuthGateScreen(
+            initialUser: savedUser,
+            currentTheme: widget.currentTheme,
+            onThemeChanged: widget.onThemeChanged,
           ),
-        );
-      }
+          transitionsBuilder: (_, anim, __, child) => FadeTransition(opacity: anim, child: child),
+        ),
+      );
     });
   }
 
@@ -226,10 +236,87 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   }
 }
 
-class MainShell extends StatefulWidget {
+class AuthGateScreen extends StatefulWidget {
+  final Map<String, dynamic>? initialUser;
   final String currentTheme;
   final Function(String) onThemeChanged;
-  const MainShell({super.key, required this.currentTheme, required this.onThemeChanged});
+
+  const AuthGateScreen({super.key, required this.initialUser, required this.currentTheme, required this.onThemeChanged});
+
+  @override
+  State<AuthGateScreen> createState() => _AuthGateScreenState();
+}
+
+class _AuthGateScreenState extends State<AuthGateScreen> {
+  Map<String, dynamic>? _user;
+  bool _unlocked = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _user = widget.initialUser;
+    if (_user != null && (_user!['securityType'] == null || _user!['securityType'] == 'none')) {
+      _unlocked = true;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_user == null) {
+      return AuthScreen(
+        onAuthenticated: (u) => setState(() {
+          _user = u;
+          _unlocked = true;
+        }),
+      );
+    }
+
+    if (!_unlocked) {
+      return AppLockScreen(
+        user: _user!,
+        onUnlocked: () => setState(() => _unlocked = true),
+        onLogout: () async {
+          await UserAccountManager.logout();
+          setState(() {
+            _user = null;
+            _unlocked = false;
+          });
+        },
+      );
+    }
+
+    return MainShell(
+      user: _user!,
+      onUserUpdated: (updated) => setState(() => _user = updated),
+      onLogout: () async {
+        await UserAccountManager.logout();
+        setState(() {
+          _user = null;
+          _unlocked = false;
+        });
+      },
+      currentTheme: widget.currentTheme,
+      onThemeChanged: widget.onThemeChanged,
+    );
+  }
+}
+
+class MainShell extends StatefulWidget {
+  final Map<String, dynamic> user;
+  final Function(Map<String, dynamic>) onUserUpdated;
+  final VoidCallback onLogout;
+  final String currentTheme;
+  final Function(String) onThemeChanged;
+
+  const MainShell({
+    super.key,
+    required this.user,
+    required this.onUserUpdated,
+    required this.onLogout,
+    required this.currentTheme,
+    required this.onThemeChanged,
+  });
+
   @override
   State<MainShell> createState() => _MainShellState();
 }
@@ -242,6 +329,7 @@ class _MainShellState extends State<MainShell> {
   final FlutterTts flutterTts = FlutterTts();
   final AudioPlayer ttsAudioPlayer = AudioPlayer();
   final AudioPlayer sfxAudioPlayer = AudioPlayer();
+  final AudioPlayer bgMusicPlayer = AudioPlayer();
 
   final TextEditingController _channelCtrl = TextEditingController();
   final TextEditingController _gifSearchCtrl = TextEditingController();
@@ -291,7 +379,6 @@ class _MainShellState extends State<MainShell> {
   String _likeMilestoneSound = 'https://google.com';
   String _donationImageBase64OrUrl = 'https://giphy.com';
   String _donationFileLabel = 'Imagem padrão';
-
   @override
   void initState() {
     super.initState();
@@ -374,11 +461,13 @@ class _MainShellState extends State<MainShell> {
       await flutterTts.speak(text);
     }
   }
+
   Future<void> _toggleMuteState() async {
     setState(() => _isMuted = !_isMuted);
     if (_isMuted) {
       await ttsAudioPlayer.stop();
       await sfxAudioPlayer.stop();
+      await bgMusicPlayer.pause();
       await flutterTts.stop();
       _showSnack('Som e alertas cortados!');
     } else {
@@ -479,7 +568,6 @@ class _MainShellState extends State<MainShell> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text), behavior: SnackBarBehavior.floating));
   }
-
   void _openSinglePlatformDialog(String platformId, String platformName) {
     setState(() => _selectedPlatform = platformId);
     final isTikTok = platformId == 'tiktok';
@@ -599,6 +687,7 @@ class _MainShellState extends State<MainShell> {
       ),
     );
   }
+
   Future<void> _searchOnlineGifs(String query, StateSetter setModalState) async {
     if (query.trim().isEmpty) return;
     setModalState(() => _searchingGifs = true);
@@ -868,17 +957,18 @@ class _MainShellState extends State<MainShell> {
         const SizedBox(height: 14),
         _menuTile(Icons.notifications_active_outlined, AppTranslations.t(_appLang, 'alerts'), () => setState(() => _selectedIndex = 1), badge: 'TIKFINITY'),
         _menuTile(Icons.chat_bubble_outline, AppTranslations.t(_appLang, 'comments'), () => setState(() => _selectedIndex = 2)),
+        _menuTile(Icons.music_note_outlined, 'Música & Áudio de Fundo', () => setState(() => _selectedIndex = 10), badge: 'SPOTIFY/MP3'),
         _menuTile(Icons.emoji_events_outlined, AppTranslations.t(_appLang, 'podium'), () => setState(() => _selectedIndex = 3)),
         _menuTile(Icons.casino_outlined, AppTranslations.t(_appLang, 'interaction'), () => setState(() => _selectedIndex = 4)),
         _menuTile(Icons.storefront_outlined, AppTranslations.t(_appLang, 'studio'), () => setState(() => _selectedIndex = 5), badge: 'PRO / LOJA'),
         _menuTile(Icons.grid_view_rounded, AppTranslations.t(_appLang, 'stream_deck'), () => setState(() => _selectedIndex = 6), badge: 'DECK'),
-        _menuTile(Icons.public, AppTranslations.t(_appLang, 'community'), () => setState(() => _selectedIndex = 7), badge: 'MUNDO'),
+        _menuTile(Icons.public, 'Comunidade Global & Chat', () => setState(() => _selectedIndex = 7), badge: 'SOCIAL'),
+        _menuTile(Icons.help_outline, 'Dúvidas & Contacto', () => setState(() => _selectedIndex = 11), badge: 'AJUDA'),
         _menuTile(Icons.favorite_border, AppTranslations.t(_appLang, 'about'), () => setState(() => _selectedIndex = 8)),
         _menuTile(Icons.settings_outlined, AppTranslations.t(_appLang, 'settings'), () => setState(() => _selectedIndex = 9)),
       ],
     );
   }
-
   Widget _buildSuperAlertsTab() {
     final cleanRoom = (_channelCtrl.text.trim().isEmpty ? 'teu_canal' : _channelCtrl.text.trim()).toLowerCase().replaceAll('@', '');
     final donateUrl = '$serverUrl/doar/$cleanRoom';
@@ -1115,6 +1205,7 @@ class _MainShellState extends State<MainShell> {
       ),
     );
   }
+
   Widget _buildCommentsTab() {
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -1190,7 +1281,6 @@ class _MainShellState extends State<MainShell> {
       ],
     );
   }
-
   Widget _buildSettingsTab() {
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -1288,9 +1378,12 @@ class _MainShellState extends State<MainShell> {
       AppTranslations.t(_appLang, 'interaction'),
       AppTranslations.t(_appLang, 'studio'),
       'Stream Deck',
-      AppTranslations.t(_appLang, 'community'),
+      'Comunidade & Chat',
       AppTranslations.t(_appLang, 'about'),
       AppTranslations.t(_appLang, 'settings'),
+      'Música & Áudio de Fundo',
+      'Dúvidas & Contacto',
+      'Perfil, Privacidade & Segurança',
     ];
 
     final screens = [
@@ -1301,16 +1394,63 @@ class _MainShellState extends State<MainShell> {
       InteractionScreen(socket: socket, roomName: _channelCtrl.text.trim()),
       OverlayStudioScreen(socket: socket, serverUrl: serverUrl, roomName: _channelCtrl.text.trim()),
       const SizedBox(),
-      CommunityGlobeScreen(serverUrl: serverUrl),
+      DefaultTabController(
+        length: 2,
+        child: Column(
+          children: [
+            const TabBar(
+              indicatorColor: Color(0xFF38BDF8),
+              labelColor: Color(0xFF38BDF8),
+              unselectedLabelColor: Colors.white54,
+              tabs: [Tab(text: '🌍 Globo Ao Vivo'), Tab(text: '👥 Criadores & Chat')],
+            ),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  CommunityGlobeScreen(serverUrl: serverUrl),
+                  CommunitySocialScreen(serverUrl: serverUrl, currentUser: widget.user),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
       const AboutHellLiveScreen(),
       _buildSettingsTab(),
+      MusicBackgroundScreen(bgPlayer: bgMusicPlayer),
+      const HelpFaqAndContactScreen(),
+      ProfilePrivacySecurityScreen(user: widget.user, onUserUpdated: widget.onUserUpdated, onLogout: widget.onLogout),
     ];
+
+    final userStatus = widget.user['status'] ?? 'online';
+    final statusCol = UserAccountManager.statusColor(userStatus);
 
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
         leading: _selectedIndex == 0
-            ? const SizedBox()
+            ? GestureDetector(
+                onTap: () => setState(() => _selectedIndex = 12),
+                child: Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Stack(
+                    alignment: Alignment.bottomRight,
+                    children: [
+                      CircleAvatar(
+                        radius: 17,
+                        backgroundColor: const Color(0xFF1E78FF),
+                        backgroundImage: widget.user['avatarPath'] != null ? FileImage(File(widget.user['avatarPath'])) : null,
+                        child: widget.user['avatarPath'] == null ? const Icon(Icons.person, size: 18, color: Colors.white) : null,
+                      ),
+                      Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(color: statusCol, shape: BoxShape.circle, border: Border.all(color: const Color(0xFF050B1E), width: 1.5)),
+                      ),
+                    ],
+                  ),
+                ),
+              )
             : IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => setState(() => _selectedIndex = 0)),
         title: _selectedIndex == 0
             ? Row(
