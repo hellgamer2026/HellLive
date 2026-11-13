@@ -396,8 +396,8 @@ class _StreamDeckScreenState extends State<StreamDeckScreen> {
                       if (val != null) {
                         final parts = val.split('x');
                         setState(() {
-                          _cols = int.parse(parts);
-                          _rows = int.parse(parts);
+                         _cols = int.parse(parts.first);
+                          _rows = int.parse(parts.last);
                         });
                       }
                     },
