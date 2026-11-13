@@ -1,3 +1,248 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:local_auth/local_auth.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+class UserAccountManager {
+  static Future<Map<String, dynamic>?> getSavedUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('hell_user_profile');
+    if (raw == null) return null;
+    return Map<String, dynamic>.from(jsonDecode(raw));
+  }
+
+  static Future<void> saveUser(Map<String, dynamic> user) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('hell_user_profile', jsonEncode(user));
+  }
+
+  static Future<void> logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('hell_user_profile');
+  }
+
+  static Color statusColor(String status) {
+    switch (status) {
+      case 'dnd':
+        return Colors.orange;
+      case 'invisible':
+        return Colors.white;
+      case 'offline':
+        return Colors.redAccent;
+      case 'online':
+      default:
+        return Colors.green;
+    }
+  }
+
+  static String statusLabel(String status) {
+    switch (status) {
+      case 'dnd':
+        return 'Não Incomodar';
+      case 'invisible':
+        return 'Invisível (Furtivo)';
+      case 'offline':
+        return 'Offline';
+      case 'online':
+      default:
+        return 'Online';
+    }
+  }
+}
+
+class AuthScreen extends StatefulWidget {
+  final Function(Map<String, dynamic>) onAuthenticated;
+  const AuthScreen({super.key, required this.onAuthenticated});
+
+  @override
+  State<AuthScreen> createState() => _AuthScreenState();
+}
+
+class _AuthScreenState extends State<AuthScreen> {
+  bool _isRegister = false;
+  final TextEditingController _firstNameCtrl = TextEditingController();
+  final TextEditingController _lastNameCtrl = TextEditingController();
+  final TextEditingController _nickCtrl = TextEditingController();
+  final TextEditingController _emailCtrl = TextEditingController();
+  final TextEditingController _passCtrl = TextEditingController();
+  final TextEditingController _phoneCtrl = TextEditingController();
+  final TextEditingController _countryCtrl = TextEditingController();
+  final TextEditingController _cityCtrl = TextEditingController();
+  final TextEditingController _addressCtrl = TextEditingController();
+
+  void _completeLogin(String provider) async {
+    final existing = await UserAccountManager.getSavedUser();
+    if (!_isRegister && existing != null && provider == 'email') {
+      widget.onAuthenticated(existing);
+      return;
+    }
+
+    final fullName = '${_firstNameCtrl.text.trim()} ${_lastNameCtrl.text.trim()}'.trim();
+    final nick = _nickCtrl.text.trim().isEmpty
+        ? (fullName.isEmpty ? (_emailCtrl.text.trim().split('@').first.isEmpty ? 'CriadorHELL' : _emailCtrl.text.trim().split('@').first) : fullName)
+        : _nickCtrl.text.trim();
+
+    final user = {
+      'firstName': _firstNameCtrl.text.trim().isEmpty ? 'Criador' : _firstNameCtrl.text.trim(),
+      'lastName': _lastNameCtrl.text.trim(),
+      'nickname': nick,
+      'email': _emailCtrl.text.trim().isEmpty ? 'criador@helllive.app' : _emailCtrl.text.trim(),
+      'phone': _phoneCtrl.text.trim(),
+      'country': _countryCtrl.text.trim(),
+      'city': _cityCtrl.text.trim(),
+      'address': _addressCtrl.text.trim(),
+      'discord': '',
+      'whatsapp': '',
+      'provider': provider,
+      'avatarPath': null,
+      'bio': 'A transmitir com o HELL Live!',
+      'status': 'online',
+      'followers': 12,
+      'following': 5,
+      'publicEmail': false,
+      'publicPhone': false,
+      'publicAddress': false,
+      'publicStats': true,
+      'securityType': 'none',
+      'securitySecret': '',
+    };
+    await UserAccountManager.saveUser(user);
+    widget.onAuthenticated(user);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF050B1E),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 460),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Image.asset('icon.png', height: 42, errorBuilder: (_, __, ___) => const Text('H', style: TextStyle(fontSize: 36, fontWeight: FontWeight.w900))),
+                      const SizedBox(width: 2),
+                      const Text('ELL ', style: TextStyle(fontSize: 34, fontWeight: FontWeight.w900, letterSpacing: 3)),
+                      const Text('Live', style: TextStyle(fontSize: 34, fontWeight: FontWeight.w800, color: Color(0xFF38BDF8))),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    _isRegister ? 'Cria o teu perfil oficial de criador' : 'Inicia sessão na tua conta HELL Live',
+                    style: const TextStyle(color: Colors.white70, fontSize: 13.5),
+                  ),
+                  const SizedBox(height: 20),
+                  Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(colors: [Color(0xFF0E1D47), Color(0xFF08112B)]),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: const Color(0xFF1E429F)),
+                    ),
+                    child: Column(
+                      children: [
+                        if (_isRegister) ...[
+                          Row(
+                            children: [
+                              Expanded(child: TextField(controller: _firstNameCtrl, decoration: const InputDecoration(labelText: 'Nome *', isDense: true))),
+                              const SizedBox(width: 8),
+                              Expanded(child: TextField(controller: _lastNameCtrl, decoration: const InputDecoration(labelText: 'Apelido *', isDense: true))),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          TextField(controller: _nickCtrl, decoration: const InputDecoration(labelText: 'Nome de Criador / Nickname *', prefixIcon: Icon(Icons.alternate_email), isDense: true)),
+                          const SizedBox(height: 10),
+                          TextField(controller: _phoneCtrl, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Contacto Telefónico', prefixIcon: Icon(Icons.phone_outlined), isDense: true)),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Expanded(child: TextField(controller: _countryCtrl, decoration: const InputDecoration(labelText: 'País / Região', isDense: true))),
+                              const SizedBox(width: 8),
+                              Expanded(child: TextField(controller: _cityCtrl, decoration: const InputDecoration(labelText: 'Cidade', isDense: true))),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          TextField(controller: _addressCtrl, decoration: const InputDecoration(labelText: 'Morada Completa (Opcional)', prefixIcon: Icon(Icons.home_outlined), isDense: true)),
+                          const SizedBox(height: 10),
+                        ],
+                        TextField(controller: _emailCtrl, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'Email *', prefixIcon: Icon(Icons.email_outlined), isDense: true)),
+                        const SizedBox(height: 10),
+                        TextField(controller: _passCtrl, obscureText: true, decoration: const InputDecoration(labelText: 'Palavra-passe *', prefixIcon: Icon(Icons.lock_outline), isDense: true)),
+                        const SizedBox(height: 18),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF), padding: const EdgeInsets.symmetric(vertical: 14)),
+                            onPressed: () {
+                              if (_emailCtrl.text.trim().isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Insere o teu email para continuar.')));
+                                return;
+                              }
+                              _completeLogin('email');
+                            },
+                            child: Text(_isRegister ? 'Registar & Entrar' : 'Entrar na Conta', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        const Row(
+                          children: [
+                            Expanded(child: Divider(color: Colors.white24)),
+                            Padding(padding: EdgeInsets.symmetric(horizontal: 10), child: Text('ou entrar rapidamente com', style: TextStyle(fontSize: 11.5, color: Colors.white54))),
+                            Expanded(child: Divider(color: Colors.white24)),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 11), side: const BorderSide(color: Colors.white24)),
+                                onPressed: () => _completeLogin('google'),
+                                icon: const Icon(Icons.g_mobiledata, size: 24, color: Colors.redAccent),
+                                label: const Text('Google', style: TextStyle(color: Colors.white)),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 11), side: const BorderSide(color: Colors.white24)),
+                                onPressed: () => _completeLogin('apple'),
+                                icon: const Icon(Icons.apple, size: 22, color: Colors.white),
+                                label: const Text('Apple / iOS', style: TextStyle(color: Colors.white)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextButton(
+                    onPressed: () => setState(() => _isRegister = !_isRegister),
+                    child: Text(
+                      _isRegister ? 'Já tens conta? Iniciar Sessão' : 'Ainda não tens conta? Criar Registo Completo',
+                      style: const TextStyle(color: Color(0xFF38BDF8)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
 class AppLockScreen extends StatefulWidget {
   final Map<String, dynamic> user;
   final VoidCallback onUnlocked;
