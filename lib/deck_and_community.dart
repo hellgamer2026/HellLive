@@ -693,106 +693,113 @@ class _WorldContinentsGlobePainter extends CustomPainter {
   final double rotation;
   _WorldContinentsGlobePainter(this.rotation);
 
-  void _drawContinentsMap(Canvas canvas, double ox, double cy, double r, Paint fill, Paint stroke) {
-    final na = Path()
-      ..moveTo(ox + r * 0.15, cy - r * 0.55)
-      ..lineTo(ox + r * 0.48, cy - r * 0.58)
-      ..lineTo(ox + r * 0.42, cy - r * 0.18)
-      ..lineTo(ox + r * 0.28, cy - r * 0.12)
-      ..close();
-    final sa = Path()
-      ..moveTo(ox + r * 0.36, cy - r * 0.05)
-      ..lineTo(ox + r * 0.54, cy + r * 0.08)
-      ..lineTo(ox + r * 0.44, cy + r * 0.58)
-      ..lineTo(ox + r * 0.34, cy + r * 0.35)
-      ..close();
-    final eu = Path()
-      ..moveTo(ox + r * 0.88, cy - r * 0.52)
-      ..lineTo(ox + r * 1.18, cy - r * 0.56)
-      ..lineTo(ox + r * 1.15, cy - r * 0.25)
-      ..lineTo(ox + r * 0.85, cy - r * 0.24)
-      ..close();
-    final af = Path()
-      ..moveTo(ox + r * 0.86, cy - r * 0.18)
-      ..lineTo(ox + r * 1.16, cy - r * 0.14)
-      ..lineTo(ox + r * 1.08, cy + r * 0.48)
-      ..lineTo(ox + r * 0.92, cy + r * 0.32)
-      ..close();
-    final as = Path()
-      ..moveTo(ox + r * 1.22, cy - r * 0.55)
-      ..lineTo(ox + r * 1.78, cy - r * 0.48)
-      ..lineTo(ox + r * 1.72, cy + r * 0.05)
-      ..lineTo(ox + r * 1.25, cy - r * 0.05)
-      ..close();
-    final oc = Path()
-      ..moveTo(ox + r * 1.52, cy + r * 0.18)
-      ..lineTo(ox + r * 1.78, cy + r * 0.20)
-      ..lineTo(ox + r * 1.74, cy + r * 0.45)
-      ..lineTo(ox + r * 1.50, cy + r * 0.40)
-      ..close();
-
-    for (final p in [na, sa, eu, af, as, oc]) {
-      canvas.drawPath(p, fill);
-      canvas.drawPath(p, stroke);
-    }
-  }
-
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2;
 
+    // Halo atmosférico externo estilo NASA
+    final atmoGlow = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          const Color(0xFF38BDF8).withOpacity(0.45),
+          const Color(0xFF1E78FF).withOpacity(0.15),
+          Colors.transparent,
+        ],
+      ).createShader(Rect.fromCircle(center: center, radius: radius * 1.18));
+    canvas.drawCircle(center, radius * 1.18, atmoGlow);
+
+    // Esfera Oceânica 3D
     final oceanPaint = Paint()
       ..shader = const RadialGradient(
-        center: Alignment(-0.35, -0.35),
-        colors: [Color(0xFF1E40AF), Color(0xFF0A1942), Color(0xFF030714)],
+        center: Alignment(-0.4, -0.4),
+        radius: 1.1,
+        colors: [Color(0xFF1D4ED8), Color(0xFF0A1D56), Color(0xFF020617)],
       ).createShader(Rect.fromCircle(center: center, radius: radius));
     canvas.drawCircle(center, radius, oceanPaint);
 
     canvas.save();
     canvas.clipPath(Path()..addOval(Rect.fromCircle(center: center, radius: radius)));
 
-    final landFill = Paint()..color = const Color(0xFF38BDF8).withOpacity(0.32)..style = PaintingStyle.fill;
-    final landStroke = Paint()..color = const Color(0xFF7DD3FC).withOpacity(0.75)..style = PaintingStyle.stroke..strokeWidth = 1.2;
+    // Grelha orbital de latitude e longitude
+    final gridPaint = Paint()
+      ..color = const Color(0xFF38BDF8).withOpacity(0.16)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.8;
+
+    for (int lat = -60; lat <= 60; lat += 30) {
+      final y = center.dy + sin(lat * pi / 180) * radius;
+      final w = cos(lat * pi / 180) * radius;
+      canvas.drawOval(Rect.fromCenter(center: Offset(center.dx, y), width: w * 2, height: w * 0.25), gridPaint);
+    }
+    for (int lon = 0; lon < 6; lon++) {
+      final ang = rotation + (lon * pi / 3);
+      final w = cos(ang).abs() * radius * 2;
+      canvas.drawOval(Rect.fromCenter(center: center, width: w, height: radius * 2), gridPaint);
+    }
+
+    // Continentes iluminados em rotação contínua
+    final landFill = Paint()..color = const Color(0xFF38BDF8).withOpacity(0.35)..style = PaintingStyle.fill;
+    final landStroke = Paint()..color = const Color(0xFFBAE6FD).withOpacity(0.85)..style = PaintingStyle.stroke..strokeWidth = 1.1;
 
     final mapWidth = radius * 2.0;
     final shift = (rotation / (2 * pi)) * mapWidth;
     for (int rep = -1; rep <= 1; rep++) {
       final ox = center.dx - radius + shift + (rep * mapWidth);
-      _drawContinentsMap(canvas, ox, center.dy, radius, landFill, landStroke);
+      final continents = [
+        Path()..moveTo(ox + radius * 0.14, center.dy - radius * 0.54)..lineTo(ox + radius * 0.48, center.dy - radius * 0.58)..lineTo(ox + radius * 0.40, center.dy - radius * 0.16)..lineTo(ox + radius * 0.26, center.dy - radius * 0.12)..close(),
+        Path()..moveTo(ox + radius * 0.36, center.dy - radius * 0.04)..lineTo(ox + radius * 0.54, center.dy + radius * 0.08)..lineTo(ox + radius * 0.44, center.dy + radius * 0.58)..lineTo(ox + radius * 0.34, center.dy + radius * 0.35)..close(),
+        Path()..moveTo(ox + radius * 0.86, center.dy - radius * 0.52)..lineTo(ox + radius * 1.18, center.dy - radius * 0.56)..lineTo(ox + radius * 1.15, center.dy - radius * 0.25)..lineTo(ox + radius * 0.85, center.dy - radius * 0.24)..close(),
+        Path()..moveTo(ox + radius * 0.86, center.dy - radius * 0.18)..lineTo(ox + radius * 1.16, center.dy - radius * 0.14)..lineTo(ox + radius * 1.08, center.dy + radius * 0.48)..lineTo(ox + radius * 0.92, center.dy + radius * 0.32)..close(),
+        Path()..moveTo(ox + radius * 1.22, center.dy - radius * 0.55)..lineTo(ox + radius * 1.78, center.dy - radius * 0.48)..lineTo(ox + radius * 1.72, center.dy + radius * 0.05)..lineTo(ox + radius * 1.25, center.dy - radius * 0.05)..close(),
+        Path()..moveTo(ox + radius * 1.52, center.dy + radius * 0.18)..lineTo(ox + radius * 1.78, center.dy + radius * 0.20)..lineTo(ox + radius * 1.74, center.dy + radius * 0.45)..lineTo(ox + radius * 1.50, center.dy + radius * 0.40)..close(),
+      ];
+      for (final p in continents) {
+        canvas.drawPath(p, landFill);
+        canvas.drawPath(p, landStroke);
+      }
     }
 
+    // Sombra esférica 3D
     final shadow3D = Paint()
       ..shader = RadialGradient(
-        center: const Alignment(-0.3, -0.3),
+        center: const Alignment(-0.35, -0.35),
         radius: 1.05,
-        colors: [Colors.transparent, Colors.black.withOpacity(0.65)],
-        stops: const [0.65, 1.0],
+        colors: [Colors.transparent, Colors.black.withOpacity(0.75)],
+        stops: const [0.6, 1.0],
       ).createShader(Rect.fromCircle(center: center, radius: radius));
     canvas.drawCircle(center, radius, shadow3D);
 
-    final beaconDot = Paint()..color = const Color(0xFF4ADE80);
-    final beaconGlow = Paint()..color = const Color(0xFF4ADE80).withOpacity(0.45);
-    for (final p in [
-      Offset(center.dx + cos(rotation) * 55, center.dy - 35),
-      Offset(center.dx - sin(rotation) * 65, center.dy + 30),
-      Offset(center.dx + cos(rotation + 2.0) * 45, center.dy + 12),
-    ]) {
-      canvas.drawCircle(p, 7, beaconGlow);
-      canvas.drawCircle(p, 3, beaconDot);
+    // Pontos brilhantes pulsantes (utilizadores ativos pelo mundo)
+    final pulse = 0.65 + 0.35 * sin(rotation * 4);
+    final nodeCore = Paint()..color = const Color(0xFF4ADE80);
+    final nodeHalo = Paint()..color = const Color(0xFF4ADE80).withOpacity(0.45 * pulse);
+    final cityNodes = [
+      Offset(center.dx + cos(rotation) * 58, center.dy - 36),
+      Offset(center.dx - sin(rotation) * 68, center.dy + 28),
+      Offset(center.dx + cos(rotation + 1.8) * 48, center.dy + 14),
+      Offset(center.dx - cos(rotation + 0.9) * 52, center.dy - 48),
+      Offset(center.dx + sin(rotation + 2.5) * 72, center.dy - 8),
+      Offset(center.dx - sin(rotation + 1.2) * 38, center.dy + 56),
+    ];
+    for (final pt in cityNodes) {
+      canvas.drawCircle(pt, 8 * pulse, nodeHalo);
+      canvas.drawCircle(pt, 3.2, nodeCore);
     }
     canvas.restore();
 
+    // Borda atmosférica brillante
     final rimPaint = Paint()
-      ..color = const Color(0xFF38BDF8).withOpacity(0.65)
+      ..color = const Color(0xFF7DD3FC).withOpacity(0.8)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.2;
+      ..strokeWidth = 2.0;
     canvas.drawCircle(center, radius, rimPaint);
   }
 
   @override
   bool shouldRepaint(covariant _WorldContinentsGlobePainter oldDelegate) => true;
 }
+
 class AboutHellLiveScreen extends StatelessWidget {
   const AboutHellLiveScreen({super.key});
 
