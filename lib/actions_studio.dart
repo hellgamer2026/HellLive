@@ -986,7 +986,7 @@ class _ActionsStudioTabState extends State<ActionsStudioTab> {
           Expanded(
             child: TabBarView(
               children: [
-                // 1. PRESENTES
+                             // 1. PRESENTES (Com Mensagem Personalizada {user} + Som + Voz Própria)
                 ListView(
                   padding: const EdgeInsets.all(14),
                   children: [
@@ -1021,6 +1021,7 @@ class _ActionsStudioTabState extends State<ActionsStudioTab> {
                       final idx = entry.key;
                       final g = entry.value;
                       final hasVoice = g['customVoicePath'] != null;
+                      final defaultMsg = 'Obrigado pelo presente ${g['name']}, {user}!';
                       return _buildUniformActionCard(
                         mediaUrl: g['png'],
                         title: g['name'],
@@ -1034,23 +1035,28 @@ class _ActionsStudioTabState extends State<ActionsStudioTab> {
                           initialSound: g['sound'] ?? '',
                           initialCustomVoice: g['customVoicePath'],
                           initialTtsThank: g['ttsThank'] ?? true,
-                          showTtsOption: true,
-                          onSave: (m, s, vPath, tts) => setState(() {
+                          initialCustomMessage: g['customMessage'],
+                          defaultMessageTemplate: defaultMsg,
+                          onSave: (m, s, vPath, tts, msg) => setState(() {
                             g['png'] = m;
                             g['sound'] = s;
                             g['customVoicePath'] = vPath;
                             g['ttsThank'] = tts;
+                            g['customMessage'] = msg;
                           }),
                         ),
                         onPlayPreview: () {
+                          final rawMsg = (g['customMessage'] == null || g['customMessage'].toString().trim().isEmpty) ? defaultMsg : g['customMessage'].toString();
+                          final spokenMsg = rawMsg.replaceAll('{user}', 'Hélder').replaceAll('{nome}', 'Hélder');
                           _openOfflinePreview(
                             title: g['name'],
                             mediaUrl: g['png'],
                             soundUrl: g['sound'] ?? '',
                             customVoicePath: g['customVoicePath'],
+                            message: spokenMsg,
                           );
-                          if (!hasVoice && g['ttsThank'] == true) {
-                            widget.onSpeakVoice('Obrigado Apoiante pelo presente ${g['name']}!');
+                          if (!hasVoice && (g['ttsThank'] ?? true) == true) {
+                            widget.onSpeakVoice(spokenMsg);
                           }
                         },
                         onToggleEnabled: (v) => setState(() => g['enabled'] = v),
@@ -1058,7 +1064,7 @@ class _ActionsStudioTabState extends State<ActionsStudioTab> {
                     }),
                   ],
                 ),
-                // 2. ALERTAS
+                // 2. ALERTAS (Com Mensagem Personalizada {user} + Som + Voz Própria)
                 ListView(
                   padding: const EdgeInsets.all(14),
                   children: [
@@ -1071,6 +1077,8 @@ class _ActionsStudioTabState extends State<ActionsStudioTab> {
                             'trigger': 'chat',
                             'name': 'Novo Alerta Personalizado',
                             'enabled': true,
+                            'ttsThank': true,
+                            'customMessage': 'Obrigado pelo apoio na live, {user}!',
                             'media': DefaultMediaLibrary.builtInGifsAndPngs.first['url']!,
                             'sound': DefaultMediaLibrary.builtInSounds.first['url']!,
                           });
@@ -1083,10 +1091,12 @@ class _ActionsStudioTabState extends State<ActionsStudioTab> {
                     ...widget.alertsList.asMap().entries.map((entry) {
                       final idx = entry.key;
                       final al = entry.value;
+                      final hasVoice = al['customVoicePath'] != null;
+                      final defaultMsg = 'Obrigado pelo apoio no ${al['name']}, {user}!';
                       return _buildUniformActionCard(
                         mediaUrl: al['media'],
                         title: al['name'],
-                        subtitle: 'Toca na imagem para personalizar',
+                        subtitle: 'Toca na imagem ou no lápis para personalizar',
                         isEnabled: al['enabled'] == true,
                         onDelete: () => setState(() => widget.alertsList.removeAt(idx)),
                         onTapImage: () => _openQuickImagePicker(al['media'], (newImg) => setState(() => al['media'] = newImg)),
@@ -1094,17 +1104,32 @@ class _ActionsStudioTabState extends State<ActionsStudioTab> {
                           title: al['name'],
                           initialMedia: al['media'],
                           initialSound: al['sound'] ?? '',
-                          onSave: (m, s, vPath, _) => setState(() {
+                          initialCustomVoice: al['customVoicePath'],
+                          initialTtsThank: al['ttsThank'] ?? true,
+                          initialCustomMessage: al['customMessage'],
+                          defaultMessageTemplate: defaultMsg,
+                          onSave: (m, s, vPath, tts, msg) => setState(() {
                             al['media'] = m;
                             al['sound'] = s;
+                            al['customVoicePath'] = vPath;
+                            al['ttsThank'] = tts;
+                            al['customMessage'] = msg;
                           }),
                         ),
-                        onPlayPreview: () => _openOfflinePreview(
-                          title: al['name'],
-                          mediaUrl: al['media'],
-                          soundUrl: al['sound'] ?? '',
-                          message: 'Apoiante ativou: ${al['name']}!',
-                        ),
+                        onPlayPreview: () {
+                          final rawMsg = (al['customMessage'] == null || al['customMessage'].toString().trim().isEmpty) ? defaultMsg : al['customMessage'].toString();
+                          final spokenMsg = rawMsg.replaceAll('{user}', 'Hélder').replaceAll('{nome}', 'Hélder');
+                          _openOfflinePreview(
+                            title: al['name'],
+                            mediaUrl: al['media'],
+                            soundUrl: al['sound'] ?? '',
+                            customVoicePath: al['customVoicePath'],
+                            message: spokenMsg,
+                          );
+                          if (!hasVoice && (al['ttsThank'] ?? true) == true) {
+                            widget.onSpeakVoice(spokenMsg);
+                          }
+                        },
                         onToggleEnabled: (v) => setState(() => al['enabled'] = v),
                       );
                     }),
@@ -1192,6 +1217,7 @@ class _ActionsStudioTabState extends State<ActionsStudioTab> {
     );
   }
 }
+
 
 class _RocketGoalPainter extends CustomPainter {
   final double progress;
