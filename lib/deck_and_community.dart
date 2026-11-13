@@ -519,7 +519,7 @@ class _StreamDeckScreenState extends State<StreamDeckScreen> {
                                                 size: _rows == 2 ? 26 : 21,
                                               ),
                                             const SizedBox(height: 5),
-                                            Padding(
+                                                                                        Padding(
                                               padding: const EdgeInsets.symmetric(horizontal: 6),
                                               child: Text(
                                                 isMuteBtn ? (widget.isMuted ? 'CORTADO' : 'SOM ATIVO') : (b['label'] as String),
@@ -530,6 +530,7 @@ class _StreamDeckScreenState extends State<StreamDeckScreen> {
                                               ),
                                             ),
                                           ],
+                                        ),
                                       if (!isCustomEmpty)
                                         Positioned(
                                           bottom: 0,
@@ -538,6 +539,7 @@ class _StreamDeckScreenState extends State<StreamDeckScreen> {
                                             height: 2.5,
                                             decoration: BoxDecoration(
                                               color: accent.withOpacity(0.85),
+
                                               borderRadius: const BorderRadius.vertical(top: Radius.circular(2)),
                                             ),
                                           ),
