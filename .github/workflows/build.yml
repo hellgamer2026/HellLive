@@ -77,13 +77,12 @@ jobs:
         with:
           channel: 'stable'
       - name: Preparar Windows, Aplicar Ícone e Compilar EXE
-      run: |
+        run: |
           flutter create --platforms=windows --project-name hell_live .
           flutter pub get
           dart run flutter_launcher_icons
           $env:CXXFLAGS="/D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS"
           flutter build windows --release
-
       - name: Guardar App Windows para Download
         uses: actions/upload-artifact@v4
         with:
