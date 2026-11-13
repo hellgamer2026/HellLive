@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class UserAccountManager {
   static Future<Map<String, dynamic>?> getSavedUser() async {
@@ -20,6 +21,9 @@ class UserAccountManager {
   }
 
   static Future<void> logout() async {
+    try {
+      await GoogleSignIn().signOut();
+    } catch (_) {}
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('hell_user_profile');
   }
@@ -61,8 +65,11 @@ class AuthScreen extends StatefulWidget {
   State<AuthScreen> createState() => _AuthScreenState();
 }
 
-class _AuthScreenState extends State<AuthScreen> {
+class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateMixin {
+  late AnimationController _pulseCtrl;
   bool _isRegister = false;
+  String _selectedProvider = 'email';
+
   final TextEditingController _firstNameCtrl = TextEditingController();
   final TextEditingController _lastNameCtrl = TextEditingController();
   final TextEditingController _nickCtrl = TextEditingController();
@@ -72,6 +79,52 @@ class _AuthScreenState extends State<AuthScreen> {
   final TextEditingController _countryCtrl = TextEditingController();
   final TextEditingController _cityCtrl = TextEditingController();
   final TextEditingController _addressCtrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 2))..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulseCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickGoogleDeviceAccount() async {
+    try {
+      final googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
+      await googleSignIn.signOut();
+      final account = await googleSignIn.signIn();
+      if (account != null) {
+        final parts = (account.displayName ?? '').split(' ');
+        setState(() {
+          _selectedProvider = 'google';
+          _emailCtrl.text = account.email;
+          _firstNameCtrl.text = parts.isNotEmpty ? parts.first : '';
+          _lastNameCtrl.text = parts.length > 1 ? parts.sublist(1).join(' ') : '';
+          _nickCtrl.text = account.displayName ?? account.email.split('@').first;
+          _isRegister = true;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Conta selecionada: ${account.email}. Completa o teu registo abaixo!')),
+          );
+        }
+      }
+    } catch (_) {
+      setState(() {
+        _selectedProvider = 'google';
+        _isRegister = true;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Preenche os teus dados abaixo para concluir o registo Google.')),
+        );
+      }
+    }
+  }
 
   void _completeLogin(String provider) async {
     final existing = await UserAccountManager.getSavedUser();
@@ -125,13 +178,30 @@ class _AuthScreenState extends State<AuthScreen> {
               constraints: const BoxConstraints(maxWidth: 460),
               child: Column(
                 children: [
-                  Row(
+                  AnimatedBuilder(
+                    animation: _pulseCtrl,
+                    builder: (_, __) => Container(
+                      width: 96,
+                      height: 96,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF1E78FF).withOpacity(0.35 + (_pulseCtrl.value * 0.3)),
+                            blurRadius: 22 + (_pulseCtrl.value * 16),
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: Image.asset('icon.png', fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.local_fire_department, size: 72, color: Color(0xFF38BDF8))),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Image.asset('icon.png', height: 42, errorBuilder: (_, __, ___) => const Text('H', style: TextStyle(fontSize: 36, fontWeight: FontWeight.w900))),
-                      const SizedBox(width: 2),
-                      const Text('ELL ', style: TextStyle(fontSize: 34, fontWeight: FontWeight.w900, letterSpacing: 3)),
-                      const Text('Live', style: TextStyle(fontSize: 34, fontWeight: FontWeight.w800, color: Color(0xFF38BDF8))),
+                      Text('HELL ', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: 3, color: Colors.white)),
+                      Text('Live', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800, letterSpacing: 1.5, color: Color(0xFF38BDF8))),
                     ],
                   ),
                   const SizedBox(height: 6),
@@ -186,16 +256,16 @@ class _AuthScreenState extends State<AuthScreen> {
                                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Insere o teu email para continuar.')));
                                 return;
                               }
-                              _completeLogin('email');
+                              _completeLogin(_selectedProvider);
                             },
-                            child: Text(_isRegister ? 'Registar & Entrar' : 'Entrar na Conta', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                            child: Text(_isRegister ? 'Concluir Registo & Entrar' : 'Entrar na Conta', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                           ),
                         ),
                         const SizedBox(height: 14),
                         const Row(
                           children: [
                             Expanded(child: Divider(color: Colors.white24)),
-                            Padding(padding: EdgeInsets.symmetric(horizontal: 10), child: Text('ou entrar rapidamente com', style: TextStyle(fontSize: 11.5, color: Colors.white54))),
+                            Padding(padding: EdgeInsets.symmetric(horizontal: 10), child: Text('ou selecionar conta', style: TextStyle(fontSize: 11.5, color: Colors.white54))),
                             Expanded(child: Divider(color: Colors.white24)),
                           ],
                         ),
@@ -205,7 +275,7 @@ class _AuthScreenState extends State<AuthScreen> {
                             Expanded(
                               child: OutlinedButton.icon(
                                 style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 11), side: const BorderSide(color: Colors.white24)),
-                                onPressed: () => _completeLogin('google'),
+                                onPressed: _pickGoogleDeviceAccount,
                                 icon: const Icon(Icons.g_mobiledata, size: 24, color: Colors.redAccent),
                                 label: const Text('Google', style: TextStyle(color: Colors.white)),
                               ),
@@ -214,7 +284,10 @@ class _AuthScreenState extends State<AuthScreen> {
                             Expanded(
                               child: OutlinedButton.icon(
                                 style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 11), side: const BorderSide(color: Colors.white24)),
-                                onPressed: () => _completeLogin('apple'),
+                                onPressed: () => setState(() {
+                                  _selectedProvider = 'apple';
+                                  _isRegister = true;
+                                }),
                                 icon: const Icon(Icons.apple, size: 22, color: Colors.white),
                                 label: const Text('Apple / iOS', style: TextStyle(color: Colors.white)),
                               ),
