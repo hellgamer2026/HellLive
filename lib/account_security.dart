@@ -125,6 +125,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
   Future<void> _handleGoogleAuth({required bool isNewRegister}) async {
     String? chosenEmail;
     String? chosenName;
+    String? chosenPhotoUrl;
 
     try {
       final googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
@@ -222,6 +223,9 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
     if (user['phoneAlertsEnabled'] == true && (user['phone'] ?? '').toString().isNotEmpty) {
       final allowed = await _verifyPhoneSmsCode(user['phone'].toString());
       if (!allowed) return;
+    }
+    if (chosenPhotoUrl != null && (user['avatarPath'] == null || user['avatarPath'].toString().isEmpty)) {
+      user['avatarUrl'] = chosenPhotoUrl;
     }
 
     await UserAccountManager.saveUser(user);
@@ -977,8 +981,13 @@ class _ProfilePrivacySecurityScreenState extends State<ProfilePrivacySecurityScr
                     CircleAvatar(
                       radius: 42,
                       backgroundColor: const Color(0xFF1E78FF),
-                      backgroundImage: widget.user['avatarPath'] != null ? FileImage(File(widget.user['avatarPath'])) : null,
-                      child: widget.user['avatarPath'] == null ? const Icon(Icons.person, size: 42, color: Colors.white) : null,
+                      backgroundImage: widget.user['avatarPath'] != null
+                          ? FileImage(File(widget.user['avatarPath']))
+                          : (widget.user['avatarUrl'] != null ? NetworkImage(widget.user['avatarUrl']) as ImageProvider : null),
+                      child: (widget.user['avatarPath'] == null && widget.user['avatarUrl'] == null)
+                          ? const Icon(Icons.person, size: 42, color: Colors.white)
+                          : null,
+
                     ),
                     Container(
                       width: 18,
