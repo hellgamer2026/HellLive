@@ -18,6 +18,7 @@ import 'deck_and_community.dart';
 import 'platform_logos.dart';
 import 'account_security.dart';
 import 'music_and_social.dart';
+import 'actions_studio.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -1773,6 +1774,10 @@ class _MainShellState extends State<MainShell> {
       ),
     );
   }
+  Widget _buildChatTtsOnlyView() {
+    final tabView = ((_buildActionsUnifiedTab() as DefaultTabController).child as Column).children[1] as Expanded;
+    return ((tabView.child as TabBarView).children)[3];
+  }
 
   Widget _buildDonationScreen() {
     final cleanRoom = (_channelCtrl.text.trim().isEmpty ? 'teu_canal' : _channelCtrl.text.trim()).toLowerCase().replaceAll('@', '');
@@ -1932,7 +1937,19 @@ class _MainShellState extends State<MainShell> {
 
     final screens = [
       _buildHomeTab(),
-      _buildActionsUnifiedTab(),
+           ActionsStudioTab(
+        alertsList: _alertsList,
+        goalsList: _goalsList,
+        sounds: _sounds,
+        sfxPlayer: sfxAudioPlayer,
+        voiceRecorder: _voiceRecorder,
+        allGiftsEnabled: _allGiftsEnabled,
+        onToggleAllGifts: (v) => setState(() => _allGiftsEnabled = v),
+        onSpeakVoice: (txt) => _speakRealVoice(txt),
+        onStateChanged: () => setState(() {}),
+        chatTtsTabContent: _buildChatTtsOnlyView(),
+      ),
+
       _buildDonationScreen(),
       const SizedBox(),
       InteractionScreen(socket: socket, roomName: _channelCtrl.text.trim(), topGifts: _topGifts, topLikes: _topLikes),
