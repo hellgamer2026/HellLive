@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,145 +11,306 @@ BoxDecoration _studioCardDeco() => BoxDecoration(
       border: Border.all(color: const Color(0xFF1E429F), width: 1.2),
     );
 
-class PodiumScreen extends StatefulWidget {
+class OverlayStudioScreen extends StatefulWidget {
   final IO.Socket socket;
+  final String serverUrl;
   final String roomName;
-  final List<Map<String, dynamic>> topGifts;
-  final List<Map<String, dynamic>> topLikes;
 
-  const PodiumScreen({
-    super.key,
-    required this.socket,
-    required this.roomName,
-    required this.topGifts,
-    required this.topLikes,
-  });
+  const OverlayStudioScreen({super.key, required this.socket, required this.serverUrl, required this.roomName});
 
   @override
-  State<PodiumScreen> createState() => _PodiumScreenState();
+  State<OverlayStudioScreen> createState() => _OverlayStudioScreenState();
 }
 
-class _PodiumScreenState extends State<PodiumScreen> {
-  String _selectedStyle = 'neon';
+class _OverlayStudioScreenState extends State<OverlayStudioScreen> {
+  final TextEditingController _giftSearchCtrl = TextEditingController();
+  late final List<Map<String, dynamic>> _all1119Gifts;
+  String _searchQuery = '';
+  bool _isProMember = false;
 
-  final List<Map<String, dynamic>> _podiumLibrary = [
-    {'id': 'neon', 'name': 'Néon Cyber (Clássico)', 'tag': 'Grátis', 'color': const Color(0xFF1E78FF)},
-    {'id': 'gold', 'name': 'Ouro Imperial VIP', 'tag': 'Destaque Semana', 'color': const Color(0xFFF59E0B)},
-    {'id': 'minimal', 'name': 'Cristal Minimalista', 'tag': 'Novo', 'color': Colors.cyanAccent},
-    {'id': 'emerald', 'name': 'Esmeralda Arena', 'tag': 'Comunidade', 'color': const Color(0xFF10B981)},
-    {'id': 'fire', 'name': 'Fogo Competitivo', 'tag': 'Novo', 'color': const Color(0xFFEF4444)},
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _all1119Gifts = DefaultMediaLibrary.generate1119GiftsDatabase();
+  }
 
-  void _applyStyle(String style, String label) {
-    setState(() => _selectedStyle = style);
-    final clean = widget.roomName.toLowerCase().replaceAll('@', '');
-    if (clean.isNotEmpty) {
-      widget.socket.emit('set_podium_style', {'room': clean, 'style': style});
-    }
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Overlay de Pódio "$label" aplicado!')));
+  @override
+  void dispose() {
+    _giftSearchCtrl.dispose();
+    super.dispose();
+  }
+
+  void _openProDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF0B1636),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: const BorderSide(color: Color(0xFFF59E0B), width: 1.5)),
+        title: const Row(
+          children: [
+            Icon(Icons.workspace_premium, color: Color(0xFFF59E0B)),
+            SizedBox(width: 8),
+            Text('HELL Live PRO & Marketplace'),
+          ],
+        ),
+        content: const Text(
+          'Desbloqueia o Estúdio Criador para publicar os teus próprios Overlays, Roletas e Packs de Sons no Marketplace Oficial HELL Live!',
+          style: TextStyle(color: Colors.white70, fontSize: 13.5),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Fechar')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF59E0B)),
+            onPressed: () {
+              setState(() => _isProMember = true);
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('🎉 Plano PRO ativado com sucesso!')));
+            },
+            child: const Text('Ativar PRO (4.99 €/mês)', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final medals = ['🥇', '🥈', '🥉'];
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: _studioCardDeco(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('🏆 Biblioteca de Overlays de Pódio', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF38BDF8), fontSize: 15)),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(color: const Color(0xFF1E78FF), borderRadius: BorderRadius.circular(8)),
-                    child: const Text('ATUALIZADO SEMANALMENTE', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              ..._podiumLibrary.map((item) {
-                final active = _selectedStyle == item['id'];
-                final Color c = item['color'] as Color;
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  decoration: BoxDecoration(
-                    color: active ? c.withOpacity(0.18) : const Color(0xFF050B1E),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: active ? c : Colors.white12),
-                  ),
-                  child: ListTile(
-                    dense: true,
-                    leading: Icon(Icons.emoji_events, color: c),
-                    title: Text(item['name'] as String, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text('Tema gratuito · ${item['tag']}', style: const TextStyle(fontSize: 11, color: Colors.white54)),
-                    trailing: ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: active ? c : const Color(0xFF122B6B)),
-                      onPressed: () => _applyStyle(item['id'] as String, item['name'] as String),
-                      child: Text(active ? 'Ativo' : 'Usar', style: const TextStyle(color: Colors.white, fontSize: 11)),
+    final cleanRoom = (widget.roomName.isEmpty ? 'teu_canal' : widget.roomName).toLowerCase().replaceAll('@', '');
+    final baseOverlayUrl = '${widget.serverUrl}/overlay/$cleanRoom';
+
+    final filteredGifts = _searchQuery.isEmpty
+        ? _all1119Gifts
+        : _all1119Gifts.where((g) => g['name'].toString().toLowerCase().contains(_searchQuery.toLowerCase())).toList();
+
+    return DefaultTabController(
+      length: 3,
+      child: Column(
+        children: [
+          const TabBar(
+            indicatorColor: Color(0xFF38BDF8),
+            labelColor: Color(0xFF38BDF8),
+            unselectedLabelColor: Colors.white54,
+            tabs: [
+              Tab(text: '🎨 Galeria Overlays'),
+              Tab(text: '🎁 1.119 Presentes'),
+              Tab(text: '✨ Marketplace PRO'),
+            ],
+          ),
+          Expanded(
+            child: TabBarView(
+              children: [
+                // 1. Galeria de Overlays Estilo TikFinity
+                ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: _studioCardDeco(),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('🔗 URL Geral Browser Source (OBS / Live Studio)', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF38BDF8), fontSize: 13)),
+                          const SizedBox(height: 6),
+                          SelectableText(baseOverlayUrl, style: const TextStyle(fontSize: 11.5, color: Colors.cyanAccent)),
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF)),
+                              onPressed: () {
+                                Clipboard.setData(ClipboardData(text: baseOverlayUrl));
+                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('URL copiado!')));
+                              },
+                              icon: const Icon(Icons.copy, size: 17, color: Colors.white),
+                              label: const Text('Copiar Link Principal', style: TextStyle(color: Colors.white)),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                );
-              }),
-            ],
+                    const SizedBox(height: 14),
+                    ...DefaultMediaLibrary.tikfinityOverlayCategories.map((cat) {
+                      final items = List<Map<String, String>>.from(cat['items']);
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Text(cat['category'], style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFF38BDF8))),
+                          ),
+                          ...items.map((ov) {
+                            final widgetUrl = '$baseOverlayUrl?widget=${ov['scene']}';
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              decoration: _studioCardDeco(),
+                              child: ListTile(
+                                leading: const Icon(Icons.widgets_outlined, color: Color(0xFF38BDF8)),
+                                title: Text(ov['name']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
+                                subtitle: Text(ov['desc']!, style: const TextStyle(fontSize: 11.5, color: Colors.white60)),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.copy, size: 18, color: Colors.white70),
+                                      tooltip: 'Copiar Link Individual',
+                                      onPressed: () {
+                                        Clipboard.setData(ClipboardData(text: widgetUrl));
+                                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Link "${ov['name']}" copiado!')));
+                                      },
+                                    ),
+                                    ElevatedButton(
+                                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF122B6B), padding: const EdgeInsets.symmetric(horizontal: 10)),
+                                      onPressed: () {
+                                        if (widget.roomName.isNotEmpty) {
+                                          widget.socket.emit('remote_command', {'room': cleanRoom, 'command': 'scene', 'payload': ov['scene']});
+                                        }
+                                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Overlay "${ov['name']}" ativado!')));
+                                      },
+                                      child: const Text('Usar', style: TextStyle(color: Colors.white, fontSize: 11.5)),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }),
+                        ],
+                      );
+                    }),
+                  ],
+                ),
+                // 2. Navegador de 1.119 Presentes Gratuitos
+                Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: TextField(
+                        controller: _giftSearchCtrl,
+                        onChanged: (v) => setState(() => _searchQuery = v),
+                        decoration: InputDecoration(
+                          hintText: 'Pesquisar nos 1.119 presentes gratuitos...',
+                          prefixIcon: const Icon(Icons.search, color: Color(0xFF38BDF8)),
+                          suffixIcon: _searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear),
+                                  onPressed: () {
+                                    _giftSearchCtrl.clear();
+                                    setState(() => _searchQuery = '');
+                                  },
+                                )
+                              : null,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          isDense: true,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: GridView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 8,
+                          mainAxisSpacing: 8,
+                          childAspectRatio: 0.76,
+                        ),
+                        itemCount: filteredGifts.length,
+                        itemBuilder: (ctx, idx) {
+                          final item = filteredGifts[idx];
+                          return Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: _studioCardDeco(),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.network(item['gif'], width: 52, height: 52, fit: BoxFit.cover),
+                                ),
+                                Text(
+                                  item['name'],
+                                  textAlign: TextAlign.center,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                                ),
+                                Text('${item['coins']} moedas', style: const TextStyle(fontSize: 10, color: Color(0xFF38BDF8))),
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: 26,
+                                  child: ElevatedButton(
+                                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF), padding: EdgeInsets.zero),
+                                    onPressed: () {
+                                      DefaultMediaLibrary.tiktokGiftsCatalog.insert(0, {
+                                        'id': item['id'],
+                                        'name': item['name'],
+                                        'coins': item['coins'],
+                                        'enabled': true,
+                                        'gif': item['gif'],
+                                        'sound': 'https://google.com',
+                                      });
+                                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('✅ "${item['name']}" adicionado às tuas Ações!')));
+                                    },
+                                    child: const Text('Baixar Grátis', style: TextStyle(color: Colors.white, fontSize: 10)),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                // 3. Marketplace & Criador PRO
+                ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: _studioCardDeco(),
+                      child: Column(
+                        children: [
+                          Icon(Icons.workspace_premium, color: _isProMember ? Colors.greenAccent : const Color(0xFFF59E0B), size: 46),
+                          const SizedBox(height: 8),
+                          Text(_isProMember ? 'Conta Criador PRO Ativa' : 'Estúdio Criador & Loja PRO', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 6),
+                          const Text(
+                            'Cria e vende os teus próprios Overlays, Roletas e Packs de Sons no Marketplace da Comunidade HELL Live.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 12.5, color: Colors.white70),
+                          ),
+                          const SizedBox(height: 12),
+                          if (!_isProMember)
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF59E0B)),
+                              onPressed: _openProDialog,
+                              child: const Text('Desbloquear Plano PRO', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 14),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: _studioCardDeco(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('💎 TOP PRESENTES (Moedas × Qtd)', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF38BDF8))),
-              const SizedBox(height: 10),
-              if (widget.topGifts.isEmpty)
-                const Text('Ainda sem presentes nesta live.', style: TextStyle(color: Colors.white54))
-              else
-                ...widget.topGifts.take(5).toList().asMap().entries.map((e) => ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: Text(e.key < 3 ? medals[e.key] : '#${e.key + 1}', style: const TextStyle(fontSize: 20)),
-                      title: Text(e.value['user'] ?? ''),
-                      trailing: Text('${e.value['score']} moedas', style: const TextStyle(color: Color(0xFF38BDF8), fontWeight: FontWeight.bold)),
-                    )),
-            ],
-          ),
-        ),
-        const SizedBox(height: 14),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: _studioCardDeco(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('❤️ TOP LIKES (1 Toque = 1 Ponto)', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFF43F5E))),
-              const SizedBox(height: 10),
-              if (widget.topLikes.isEmpty)
-                const Text('Ainda sem likes nesta live.', style: TextStyle(color: Colors.white54))
-              else
-                ...widget.topLikes.take(5).toList().asMap().entries.map((e) => ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: Text(e.key < 3 ? medals[e.key] : '#${e.key + 1}', style: const TextStyle(fontSize: 20)),
-                      title: Text(e.value['user'] ?? ''),
-                      trailing: Text('${e.value['score']} likes', style: const TextStyle(color: Color(0xFFF43F5E), fontWeight: FontWeight.bold)),
-                    )),
-            ],
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
 class InteractionScreen extends StatefulWidget {
   final IO.Socket socket;
   final String roomName;
+  final List<Map<String, dynamic>> topGifts;
+  final List<Map<String, dynamic>> topLikes;
 
-  const InteractionScreen({super.key, required this.socket, required this.roomName});
+  const InteractionScreen({
+    super.key,
+    required this.socket,
+    required this.roomName,
+    required this.topGifts,
+    required this.topLikes,
+  });
 
   @override
   State<InteractionScreen> createState() => _InteractionScreenState();
@@ -159,7 +321,11 @@ class _InteractionScreenState extends State<InteractionScreen> with SingleTicker
   double _currentAngle = 0;
   String _lastWinner = 'Toca em Girar!';
   String _wheelTheme = 'neon';
-  bool _chatJoinActive = false;
+
+  int _subathonSeconds = 1800;
+  bool _subathonRunning = false;
+  Timer? _subathonTimer;
+  int _secPerCoin = 2;
 
   final TextEditingController _optionCtrl = TextEditingController();
   final TextEditingController _pollQuestionCtrl = TextEditingController(text: 'Jogo a próxima partida de sniper?');
@@ -178,14 +344,46 @@ class _InteractionScreenState extends State<InteractionScreen> with SingleTicker
   void initState() {
     super.initState();
     _wheelCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 3));
+    widget.socket.on('live_event', (data) {
+      if (!mounted || !_subathonRunning) return;
+      if (data['type'] == 'gift') {
+        final coins = (data['coins'] ?? 1) as int;
+        setState(() => _subathonSeconds += (coins * _secPerCoin));
+      }
+    });
   }
 
   @override
   void dispose() {
+    _subathonTimer?.cancel();
     _wheelCtrl.dispose();
     _optionCtrl.dispose();
     _pollQuestionCtrl.dispose();
     super.dispose();
+  }
+
+  void _toggleSubathon() {
+    if (_subathonRunning) {
+      _subathonTimer?.cancel();
+      setState(() => _subathonRunning = false);
+    } else {
+      setState(() => _subathonRunning = true);
+      _subathonTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (_subathonSeconds > 0) {
+          setState(() => _subathonSeconds--);
+        } else {
+          _subathonTimer?.cancel();
+          setState(() => _subathonRunning = false);
+        }
+      });
+    }
+  }
+
+  String _formatDuration(int totalSeconds) {
+    final h = (totalSeconds ~/ 3600).toString().padLeft(2, '0');
+    final m = ((totalSeconds % 3600) ~/ 60).toString().padLeft(2, '0');
+    final s = (totalSeconds % 60).toString().padLeft(2, '0');
+    return '$h:$m:$s';
   }
 
   void _spinWheel() {
@@ -209,276 +407,10 @@ class _InteractionScreenState extends State<InteractionScreen> with SingleTicker
     if (_wheelTheme == 'toxic') return [const Color(0xFF22C55E), const Color(0xFF10B981), const Color(0xFF84CC16), const Color(0xFF059669)];
     return [const Color(0xFF1E78FF), const Color(0xFF38BDF8), const Color(0xFF6366F1), const Color(0xFF0EA5E9)];
   }
-
   @override
   Widget build(BuildContext context) {
     final cleanRoom = widget.roomName.toLowerCase().replaceAll('@', '');
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: _studioCardDeco(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('📊 Votação Ao Vivo pelo Chat', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF38BDF8), fontSize: 15)),
-                  Switch(
-                    activeColor: Colors.white,
-                    activeTrackColor: const Color(0xFF1E78FF),
-                    value: _pollActive,
-                    onChanged: (v) {
-                      setState(() => _pollActive = v);
-                      if (cleanRoom.isNotEmpty) {
-                        widget.socket.emit('update_poll', {
-                          'room': cleanRoom,
-                          'poll': {
-                            'active': v,
-                            'question': _pollQuestionCtrl.text.trim(),
-                            'opt1Label': 'SIM (!sim)',
-                            'opt2Label': 'NÃO (!nao)',
-                            'opt1Key': '!sim',
-                            'opt2Key': '!nao',
-                          }
-                        });
-                      }
-                    },
-                  ),
-                ],
-              ),
-              const Text('O chat vota escrevendo !sim ou !nao e as barras sobem na tela:', style: TextStyle(fontSize: 12, color: Colors.white60)),
-              const SizedBox(height: 8),
-              TextField(controller: _pollQuestionCtrl, decoration: const InputDecoration(labelText: 'Pergunta para a Live')),
-            ],
-          ),
-        ),
-        const SizedBox(height: 14),
-        Container(
-          padding: const EdgeInsets.all(18),
-          decoration: _studioCardDeco(),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('🎡 Roleta Interativa', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF38BDF8), fontSize: 15)),
-                  DropdownButton<String>(
-                    value: _wheelTheme,
-                    dropdownColor: const Color(0xFF0B1636),
-                    items: const [
-                      DropdownMenuItem(value: 'neon', child: Text('Estilo Néon')),
-                      DropdownMenuItem(value: 'fire', child: Text('Estilo Fogo')),
-                      DropdownMenuItem(value: 'toxic', child: Text('Estilo Tóxico')),
-                    ],
-                    onChanged: (v) => setState(() => _wheelTheme = v ?? 'neon'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  Transform.rotate(
-                    angle: _currentAngle,
-                    child: Container(
-                      width: 165,
-                      height: 165,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: SweepGradient(colors: _wheelColors()),
-                        border: Border.all(color: Colors.white, width: 3),
-                        boxShadow: [BoxShadow(color: const Color(0xFF38BDF8).withOpacity(0.45), blurRadius: 18)],
-                      ),
-                    ),
-                  ),
-                  Container(
-                    width: 62,
-                    height: 62,
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF050B1E),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFF38BDF8), width: 2),
-                    ),
-                    child: Image.asset('icon.png', fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.local_fire_department, color: Color(0xFF38BDF8))),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(_lastWinner, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8))),
-              const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF)),
-                  onPressed: _spinWheel,
-                  icon: const Icon(Icons.refresh, color: Colors.white),
-                  label: const Text('GIRAR ROLETA (App + Tela)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                ),
-              ),
-              const SizedBox(height: 10),
-              const Align(alignment: Alignment.centerLeft, child: Text('Biblioteca de Modelos de Roleta:', style: TextStyle(fontSize: 12, color: Colors.white70))),
-              const SizedBox(height: 6),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: DefaultMediaLibrary.wheelTemplates.map((tpl) => Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: ActionChip(
-                          label: Text(tpl['name'], style: const TextStyle(fontSize: 11)),
-                          onPressed: () {
-                            setState(() {
-                              _wheelTheme = tpl['theme'];
-                              _options = List<String>.from(tpl['items']);
-                            });
-                          },
-                        ),
-                      )).toList(),
-                ),
-              ),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Sorteio do Chat (!entrar)', style: TextStyle(fontSize: 13)),
-                subtitle: const Text('Quem escrever !entrar no chat entra na roleta', style: TextStyle(fontSize: 11, color: Colors.white54)),
-                value: _chatJoinActive,
-                onChanged: (v) {
-                  setState(() => _chatJoinActive = v);
-                  if (cleanRoom.isNotEmpty) {
-                    widget.socket.emit('toggle_chat_wheel_join', {'room': cleanRoom, 'open': v, 'keyword': '!entrar'});
-                  }
-                },
-              ),
-              Row(
-                children: [
-                  Expanded(child: TextField(controller: _optionCtrl, decoration: const InputDecoration(hintText: 'Adicionar opção...', isDense: true))),
-                  IconButton(
-                    icon: const Icon(Icons.add_circle, color: Color(0xFF38BDF8)),
-                    onPressed: () {
-                      if (_optionCtrl.text.trim().isNotEmpty) {
-                        setState(() {
-                          _options.add(_optionCtrl.text.trim());
-                          _optionCtrl.clear();
-                        });
-                      }
-                    },
-                  ),
-                ],
-              ),
-              Wrap(
-                spacing: 6,
-                children: _options.map((o) => Chip(label: Text(o, style: const TextStyle(fontSize: 11)), onDeleted: () => setState(() => _options.remove(o)))).toList(),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class OverlayStudioScreen extends StatefulWidget {
-  final IO.Socket socket;
-  final String serverUrl;
-  final String roomName;
-
-  const OverlayStudioScreen({super.key, required this.socket, required this.serverUrl, required this.roomName});
-
-  @override
-  State<OverlayStudioScreen> createState() => _OverlayStudioScreenState();
-}
-
-class _OverlayStudioScreenState extends State<OverlayStudioScreen> {
-  bool _isProMember = false;
-  String _selectedMarketCat = 'Todos';
-  final TextEditingController _packNameCtrl = TextEditingController();
-  final TextEditingController _creatorNetCtrl = TextEditingController(text: '3.50');
-  String _packType = 'Overlay';
-
-  final List<Map<String, String>> _marketplaceItems = [
-    {'title': 'Pack Cyber Arena FPS', 'type': 'Overlay', 'author': 'HELL Originals', 'price': 'Grátis', 'scene': 'live'},
-    {'title': 'Roleta Castigos Extremos', 'type': 'Roleta', 'author': '@KikoGamer', 'price': '2.89 €', 'scene': 'live'},
-    {'title': 'Alertas Explosão Ouro', 'type': 'Alertas', 'author': '@SofiaLive', 'price': '3.49 €', 'scene': 'live'},
-    {'title': 'Pack Sons Meme PT/BR', 'type': 'Sons', 'author': '@TugaStream', 'price': '2.19 €', 'scene': 'live'},
-    {'title': 'Moldura Câmara Néon Minimal', 'type': 'Overlay', 'author': 'HELL Originals', 'price': 'Grátis', 'scene': 'cam_frame'},
-  ];
-
-  String _calcFinalPrice(String rawNet) {
-    final net = double.tryParse(rawNet.replaceAll(',', '.')) ?? 0.0;
-    if (net <= 0) return 'Grátis';
-    final total = (net * 1.30) + 0.35;
-    return '${total.toStringAsFixed(2)} €';
-  }
-
-  void _openProUpgradeModal() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF0B1636),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: const BorderSide(color: Color(0xFFF59E0B), width: 1.5)),
-        title: const Row(
-          children: [
-            Icon(Icons.workspace_premium, color: Color(0xFFF59E0B), size: 28),
-            SizedBox(width: 8),
-            Text('HELL Live PRO', style: TextStyle(fontWeight: FontWeight.w900)),
-          ],
-        ),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Desbloqueia o Estúdio Criador Completo e monetiza o teu talento:', style: TextStyle(fontWeight: FontWeight.bold)),
-            SizedBox(height: 12),
-            Text('✅ Criação ilimitada de Overlays, Roletas, Alertas e Packs de Sons'),
-            SizedBox(height: 6),
-            Text('✅ Publicação direta no Marketplace Oficial HELL Live'),
-            SizedBox(height: 6),
-            Text('✅ Recebes 100% do valor líquido que definires (taxa aplicada ao comprador)'),
-            SizedBox(height: 6),
-            Text('✅ Selo Criador PRO verificado no teu perfil da Comunidade'),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Agora Não')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF59E0B)),
-            onPressed: () {
-              setState(() => _isProMember = true);
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('🎉 Modo Criador PRO ativado!')));
-            },
-            child: const Text('Ativar Plano PRO (4.99 €/mês)', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _publishToMarketplace() {
-    if (_packNameCtrl.text.trim().isEmpty) return;
-    final finalPrice = _calcFinalPrice(_creatorNetCtrl.text);
-    setState(() {
-      _marketplaceItems.insert(0, {
-        'title': _packNameCtrl.text.trim(),
-        'type': _packType,
-        'author': widget.roomName.isEmpty ? '@CriadorPRO' : '@${widget.roomName.replaceAll('@', '')}',
-        'price': finalPrice,
-        'scene': 'live',
-      });
-      _packNameCtrl.clear();
-    });
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('🚀 Publicado no Marketplace por $finalPrice!')));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final cleanRoom = (widget.roomName.isEmpty ? 'teu_canal' : widget.roomName).toLowerCase().replaceAll('@', '');
-    final studioUrl = '${widget.serverUrl}/overlay/$cleanRoom';
-    final filteredMarket = _selectedMarketCat == 'Todos'
-        ? _marketplaceItems
-        : _marketplaceItems.where((m) => m['type'] == _selectedMarketCat).toList();
+    final medals = ['🥇', '🥈', '🥉'];
 
     return DefaultTabController(
       length: 3,
@@ -489,9 +421,9 @@ class _OverlayStudioScreenState extends State<OverlayStudioScreen> {
             labelColor: Color(0xFF38BDF8),
             unselectedLabelColor: Colors.white54,
             tabs: [
-              Tab(text: '🛒 Marketplace'),
-              Tab(text: '✨ Criador PRO'),
-              Tab(text: '📦 Grátis & Link'),
+              Tab(text: '⏱️ Temporizador'),
+              Tab(text: '🎡 Roleta & Votação'),
+              Tab(text: '🏆 Pódio Oficial'),
             ],
           ),
           Expanded(
@@ -500,189 +432,218 @@ class _OverlayStudioScreenState extends State<OverlayStudioScreen> {
                 ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: ['Todos', 'Overlay', 'Roleta', 'Alertas', 'Sons'].map((cat) {
-                          final sel = _selectedMarketCat == cat;
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: ChoiceChip(
-                              label: Text(cat),
-                              selected: sel,
-                              selectedColor: const Color(0xFF1E78FF),
-                              onSelected: (_) => setState(() => _selectedMarketCat = cat),
-                            ),
-                          );
-                        }).toList(),
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: _studioCardDeco(),
+                      child: Column(
+                        children: [
+                          const Text('CONTAGEM REGRESSIVA INTERATIVA', style: TextStyle(fontSize: 11, letterSpacing: 2, color: Color(0xFF38BDF8), fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 6),
+                          const Text('Os presentes dos espectadores aumentam o relógio automaticamente!', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Colors.white60)),
+                          const SizedBox(height: 16),
+                          Text(_formatDuration(_subathonSeconds), style: const TextStyle(fontSize: 44, fontWeight: FontWeight.w900, letterSpacing: 3, color: Colors.white)),
+                          const SizedBox(height: 16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(backgroundColor: _subathonRunning ? Colors.amber : Colors.green),
+                                onPressed: _toggleSubathon,
+                                icon: Icon(_subathonRunning ? Icons.pause : Icons.play_arrow, color: Colors.black),
+                                label: Text(_subathonRunning ? 'Pausar' : 'Iniciar Relógio', style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                              ),
+                              const SizedBox(width: 10),
+                              OutlinedButton(
+                                onPressed: () => setState(() => _subathonSeconds += 300),
+                                child: const Text('+5 Min'),
+                              ),
+                              const SizedBox(width: 8),
+                              OutlinedButton(
+                                onPressed: () => setState(() => _subathonSeconds = 1800),
+                                child: const Text('Reset'),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Tempo ganho por cada moeda:', style: TextStyle(fontSize: 12.5)),
+                              DropdownButton<int>(
+                                value: _secPerCoin,
+                                dropdownColor: const Color(0xFF0B1636),
+                                items: const [
+                                  DropdownMenuItem(value: 1, child: Text('+1 seg / moeda')),
+                                  DropdownMenuItem(value: 2, child: Text('+2 seg / moeda')),
+                                  DropdownMenuItem(value: 5, child: Text('+5 seg / moeda')),
+                                  DropdownMenuItem(value: 10, child: Text('+10 seg / moeda')),
+                                ],
+                                onChanged: (v) => setState(() => _secPerCoin = v ?? 2),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    ...filteredMarket.map((item) {
-                      final isFree = item['price'] == 'Grátis';
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 10),
-                        decoration: _studioCardDeco(),
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: isFree ? const Color(0xFF1E78FF).withOpacity(0.2) : const Color(0xFFF59E0B).withOpacity(0.2),
-                            child: Icon(
-                              item['type'] == 'Roleta' ? Icons.casino : (item['type'] == 'Sons' ? Icons.music_note : Icons.layers),
-                              color: isFree ? const Color(0xFF38BDF8) : const Color(0xFFF59E0B),
-                            ),
-                          ),
-                          title: Text(item['title']!, style: const TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: Text('${item['type']} · Por ${item['author']}', style: const TextStyle(fontSize: 11.5, color: Colors.white60)),
-                          trailing: ElevatedButton(
-                            style: ElevatedButton.styleFrom(backgroundColor: isFree ? const Color(0xFF1E78FF) : const Color(0xFFF59E0B)),
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                content: Text(isFree ? '✅ "${item['title']}" transferido e aplicado!' : '💳 "${item['title']}" (${item['price']}) desbloqueado!'),
-                              ));
-                            },
-                            child: Text(item['price']!, style: TextStyle(color: isFree ? Colors.white : Colors.black, fontWeight: FontWeight.bold, fontSize: 12)),
-                          ),
-                        ),
-                      );
-                    }),
-                  ],
-                ),
-                ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    if (!_isProMember)
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(colors: [Color(0xFF1E1B4B), Color(0xFF0B1636)]),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0xFFF59E0B), width: 1.5),
-                        ),
-                        child: Column(
-                          children: [
-                            const Icon(Icons.workspace_premium, color: Color(0xFFF59E0B), size: 52),
-                            const SizedBox(height: 10),
-                            const Text('Estúdio Criador & Loja PRO', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900)),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Cria os teus próprios Overlays, Roletas, Alertas e Packs de Sons sem limites e coloca-os à venda no Marketplace da comunidade!',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(color: Colors.white70, fontSize: 13.5),
-                            ),
-                            const SizedBox(height: 16),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF59E0B), padding: const EdgeInsets.symmetric(vertical: 14)),
-                                onPressed: _openProUpgradeModal,
-                                icon: const Icon(Icons.lock_open, color: Colors.black),
-                                label: const Text('Desbloquear Plano PRO', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    else
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: _studioCardDeco(),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Row(
-                              children: [
-                                Icon(Icons.verified, color: Color(0xFFF59E0B)),
-                                SizedBox(width: 8),
-                                Text('Publicar Nova Criação no Marketplace', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFFF59E0B))),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            DropdownButtonFormField<String>(
-                              value: _packType,
-                              dropdownColor: const Color(0xFF0B1636),
-                              decoration: const InputDecoration(labelText: 'Tipo de Criação'),
-                              items: const [
-                                DropdownMenuItem(value: 'Overlay', child: Text('Overlay de Live')),
-                                DropdownMenuItem(value: 'Roleta', child: Text('Roleta Interativa')),
-                                DropdownMenuItem(value: 'Alertas', child: Text('Pack de Alertas')),
-                                DropdownMenuItem(value: 'Sons', child: Text('Pack de Sons / Efeitos')),
-                              ],
-                              onChanged: (v) => setState(() => _packType = v ?? 'Overlay'),
-                            ),
-                            const SizedBox(height: 10),
-                            TextField(controller: _packNameCtrl, decoration: const InputDecoration(labelText: 'Nome do Teu Pack / Overlay')),
-                            const SizedBox(height: 10),
-                            TextField(
-                              controller: _creatorNetCtrl,
-                              onChanged: (_) => setState(() {}),
-                              keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(labelText: 'Valor Líquido que Queres Receber (€)'),
-                            ),
-                            const SizedBox(height: 6),
-                            Text('Preço final na loja (c/ taxa comprador): ${_calcFinalPrice(_creatorNetCtrl.text)}', style: const TextStyle(fontSize: 12, color: Colors.cyanAccent)),
-                            const SizedBox(height: 14),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF59E0B), padding: const EdgeInsets.symmetric(vertical: 13)),
-                                onPressed: _publishToMarketplace,
-                                icon: const Icon(Icons.storefront, color: Colors.black),
-                                label: const Text('Publicar à Venda no Marketplace', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                   ],
                 ),
                 ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(14),
+                      padding: const EdgeInsets.all(16),
                       decoration: _studioCardDeco(),
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('🔗 Link de Navegador (OBS / Streamlabs / TikTok Studio)', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF38BDF8), fontSize: 13)),
-                          const SizedBox(height: 6),
-                          SelectableText(studioUrl, style: const TextStyle(fontSize: 11.5, color: Colors.cyanAccent)),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('🎡 Roleta Interativa', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF38BDF8), fontSize: 15)),
+                              DropdownButton<String>(
+                                value: _wheelTheme,
+                                dropdownColor: const Color(0xFF0B1636),
+                                items: const [
+                                  DropdownMenuItem(value: 'neon', child: Text('Néon')),
+                                  DropdownMenuItem(value: 'fire', child: Text('Fogo')),
+                                  DropdownMenuItem(value: 'toxic', child: Text('Tóxico')),
+                                ],
+                                onChanged: (v) => setState(() => _wheelTheme = v ?? 'neon'),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Transform.rotate(
+                                angle: _currentAngle,
+                                child: Container(
+                                  width: 150,
+                                  height: 150,
+                                  decoration: BoxDecoration(shape: BoxShape.circle, gradient: SweepGradient(colors: _wheelColors()), border: Border.all(color: Colors.white, width: 3)),
+                                ),
+                              ),
+                              Container(
+                                width: 56,
+                                height: 56,
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(color: const Color(0xFF050B1E), shape: BoxShape.circle, border: Border.all(color: const Color(0xFF38BDF8), width: 2)),
+                                child: Image.asset('icon.png', fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.local_fire_department, color: Color(0xFF38BDF8))),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Text(_lastWinner, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8))),
                           const SizedBox(height: 8),
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton.icon(
                               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF)),
-                              onPressed: () {
-                                Clipboard.setData(ClipboardData(text: studioUrl));
-                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Link copiado!')));
-                              },
-                              icon: const Icon(Icons.copy, color: Colors.white, size: 18),
-                              label: const Text('Copiar Link', style: TextStyle(color: Colors.white)),
+                              onPressed: _spinWheel,
+                              icon: const Icon(Icons.refresh, color: Colors.white),
+                              label: const Text('GIRAR ROLETA', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                             ),
+                          ),
+                          Row(
+                            children: [
+                              Expanded(child: TextField(controller: _optionCtrl, decoration: const InputDecoration(hintText: 'Adicionar opção...', isDense: true))),
+                              IconButton(
+                                icon: const Icon(Icons.add_circle, color: Color(0xFF38BDF8)),
+                                onPressed: () {
+                                  if (_optionCtrl.text.trim().isNotEmpty) {
+                                    setState(() {
+                                      _options.add(_optionCtrl.text.trim());
+                                      _optionCtrl.clear();
+                                    });
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                          Wrap(
+                            spacing: 6,
+                            children: _options.map((o) => Chip(label: Text(o, style: const TextStyle(fontSize: 11)), onDeleted: () => setState(() => _options.remove(o)))).toList(),
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 12),
-                    ...DefaultMediaLibrary.overlayPresets.map((preset) => Container(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          decoration: _studioCardDeco(),
-                          child: ListTile(
-                            leading: const Icon(Icons.layers, color: Color(0xFF38BDF8)),
-                            title: Text(preset['name']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                            subtitle: Text(preset['desc']!, style: const TextStyle(fontSize: 11.5, color: Colors.white60)),
-                            trailing: ElevatedButton(
-                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF122B6B)),
-                              onPressed: () {
-                                if (widget.roomName.isNotEmpty) {
-                                  widget.socket.emit('remote_command', {'room': cleanRoom, 'command': 'scene', 'payload': preset['scene']});
-                                }
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Overlay "${preset['name']}" ativado!')));
-                              },
-                              child: const Text('Usar', style: TextStyle(color: Colors.white, fontSize: 12)),
-                            ),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: _studioCardDeco(),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('📊 Votação Ao Vivo (!sim / !nao)', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF38BDF8))),
+                              Switch(
+                                activeColor: Colors.white,
+                                activeTrackColor: const Color(0xFF1E78FF),
+                                value: _pollActive,
+                                onChanged: (v) {
+                                  setState(() => _pollActive = v);
+                                  if (cleanRoom.isNotEmpty) {
+                                    widget.socket.emit('update_poll', {
+                                      'room': cleanRoom,
+                                      'poll': {'active': v, 'question': _pollQuestionCtrl.text.trim(), 'opt1Label': 'SIM (!sim)', 'opt2Label': 'NÃO (!nao)', 'opt1Key': '!sim', 'opt2Key': '!nao'}
+                                    });
+                                  }
+                                },
+                              ),
+                            ],
                           ),
-                        )),
+                          TextField(controller: _pollQuestionCtrl, decoration: const InputDecoration(labelText: 'Pergunta para o Chat')),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: _studioCardDeco(),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('💎 TOP PRESENTES DA LIVE', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF38BDF8))),
+                          const SizedBox(height: 10),
+                          if (widget.topGifts.isEmpty)
+                            const Text('Ainda sem presentes registados nesta sessão.', style: TextStyle(color: Colors.white54))
+                          else
+                            ...widget.topGifts.take(5).toList().asMap().entries.map((e) => ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  leading: Text(e.key < 3 ? medals[e.key] : '#${e.key + 1}', style: const TextStyle(fontSize: 20)),
+                                  title: Text(e.value['user'] ?? ''),
+                                  trailing: Text('${e.value['score']} moedas', style: const TextStyle(color: Color(0xFF38BDF8), fontWeight: FontWeight.bold)),
+                                )),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: _studioCardDeco(),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('❤️ TOP LIKES DA LIVE', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFF43F5E))),
+                          const SizedBox(height: 10),
+                          if (widget.topLikes.isEmpty)
+                            const Text('Ainda sem likes registados nesta sessão.', style: TextStyle(color: Colors.white54))
+                          else
+                            ...widget.topLikes.take(5).toList().asMap().entries.map((e) => ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  leading: Text(e.key < 3 ? medals[e.key] : '#${e.key + 1}', style: const TextStyle(fontSize: 20)),
+                                  title: Text(e.value['user'] ?? ''),
+                                  trailing: Text('${e.value['score']} likes', style: const TextStyle(color: Color(0xFFF43F5E), fontWeight: FontWeight.bold)),
+                                )),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ],
