@@ -1,12 +1,10 @@
-import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:file_picker/file_picker.dart';
-import 'package:http/http.dart' as http;
-import 'package:url_launcher/url_launcher.dart';
+import 'app_data.dart';
 
 class StreamDeckScreen extends StatefulWidget {
   final IO.Socket socket;
@@ -39,514 +37,361 @@ class StreamDeckScreen extends StatefulWidget {
 }
 
 class _StreamDeckScreenState extends State<StreamDeckScreen> {
-  final PageController _pageCtrl = PageController();
-  int _currentPage = 0;
-  int _cols = 5;
-  int _rows = 3;
-  Color _deckBgColor = const Color(0xFF050B1E);
+  final TextEditingController _codeInputCtrl = TextEditingController();
+  int _cols = 4;
+  int _rows = 2;
+  String _selectedSoftware = 'OBS Studio';
 
-  static final List<Color> _deckBgOptions = [
-    const Color(0xFF050B1E),
-    const Color(0xFF07090E),
-    const Color(0xFF140A26),
-    const Color(0xFF061A14),
-    const Color(0xFF18181B),
-  ];
+  final Map<String, IconData> _iconCatalog = {
+    'mute': Icons.volume_off_rounded,
+    'mic': Icons.mic_off_rounded,
+    'scene_live': Icons.videocam_rounded,
+    'scene_chat': Icons.chat_bubble_rounded,
+    'record': Icons.fiber_manual_record_rounded,
+    'stream': Icons.podcasts_rounded,
+    'alert': Icons.notifications_active_rounded,
+    'tts': Icons.record_voice_over_rounded,
+    'wheel': Icons.casino_rounded,
+    'clap': Icons.celebration_rounded,
+    'horn': Icons.campaign_rounded,
+    'custom': Icons.bolt_rounded,
+  };
 
-  static final List<IconData> _iconLibrary = [
-    Icons.celebration_outlined,
-    Icons.campaign_outlined,
-    Icons.emoji_events_outlined,
-    Icons.graphic_eq,
-    Icons.rocket_launch_outlined,
-    Icons.bolt,
-    Icons.casino_outlined,
-    Icons.play_arrow_rounded,
-    Icons.videocam_outlined,
-    Icons.sports_esports_outlined,
-    Icons.pause_rounded,
-    Icons.stop_rounded,
-    Icons.notifications_active_outlined,
-    Icons.local_fire_department_outlined,
-    Icons.favorite_border,
-    Icons.star_border_rounded,
-    Icons.mic_none_rounded,
-    Icons.headset_mic_outlined,
-    Icons.monetization_on_outlined,
-    Icons.shield_outlined,
-    Icons.flash_on_outlined,
-    Icons.music_note_outlined,
-    Icons.auto_awesome_outlined,
-    Icons.whatshot_outlined,
-  ];
-
-  static final List<Color> _accentColors = [
-    const Color(0xFF38BDF8),
-    const Color(0xFF22C55E),
-    const Color(0xFFFBBF24),
+  final List<Color> _colorCatalog = [
     const Color(0xFFEF4444),
-    const Color(0xFFA78BFA),
-    const Color(0xFFF472B6),
+    const Color(0xFF38BDF8),
+    const Color(0xFF1E78FF),
+    const Color(0xFF10B981),
+    const Color(0xFFF59E0B),
+    const Color(0xFF8B5CF6),
+    const Color(0xFFEC4899),
+    const Color(0xFF64748B),
   ];
 
-  late List<List<Map<String, dynamic>>> _pages;
+  final Map<String, String> _realTasksCatalog = {
+    'toggle_mute': 'Cortar / Ativar Todos os Sons (Pânico)',
+    'obs_mic_mute': 'Mutar / Desmutar Microfone (OBS / Studio)',
+    'obs_scene_live': 'Mudar para Cena Principal (Jogo / Live)',
+    'obs_scene_chat': 'Mudar para Cena Just Chatting / Câmara',
+    'obs_scene_brb': 'Mudar para Cena Já Volto (BRB)',
+    'obs_toggle_record': 'Iniciar / Parar Gravação (OBS / Streamlabs)',
+    'obs_toggle_stream': 'Iniciar / Parar Transmissão Ao Vivo',
+    'test_alert': 'Disparar Alerta Visual + Som na Live',
+    'tts_read_last': 'Ler Último Comentário do Chat por Voz',
+    'wheel_spin': 'Girar Roleta Interativa na Tela',
+    'sound_clap': 'Tocar Efeito Sonoro: Aplausos',
+    'sound_horn': 'Tocar Efeito Sonoro: Buzina Épica',
+  };
+
+  late List<Map<String, dynamic>> _buttons;
 
   @override
   void initState() {
     super.initState();
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-
-    _pages = [
-      [
-        {'label': 'Aplausos', 'icon': Icons.celebration_outlined, 'pngPath': null, 'color': const Color(0xFF38BDF8), 'cmd': 'sound', 'val': 'https://google.com'},
-        {'label': 'Buzina', 'icon': Icons.campaign_outlined, 'pngPath': null, 'color': const Color(0xFFFBBF24), 'cmd': 'sound', 'val': 'https://google.com'},
-        {'label': 'Vitória', 'icon': Icons.emoji_events_outlined, 'pngPath': null, 'color': const Color(0xFF22C55E), 'cmd': 'sound', 'val': 'https://google.com'},
-        {'label': 'Suspense', 'icon': Icons.graphic_eq, 'pngPath': null, 'color': const Color(0xFFA78BFA), 'cmd': 'sound', 'val': 'https://google.com'},
-        {'label': 'Foguetes', 'icon': Icons.rocket_launch_outlined, 'pngPath': null, 'color': const Color(0xFFF472B6), 'cmd': 'sound', 'val': 'https://google.com'},
-        {'label': 'Laser', 'icon': Icons.bolt, 'pngPath': null, 'color': const Color(0xFF38BDF8), 'cmd': 'sound', 'val': 'https://google.com'},
-        {'label': 'Roleta', 'icon': Icons.casino_outlined, 'pngPath': null, 'color': const Color(0xFF38BDF8), 'cmd': 'wheel', 'val': null},
-        {'label': 'Início Live', 'icon': Icons.play_arrow_rounded, 'pngPath': null, 'color': const Color(0xFF38BDF8), 'cmd': 'scene', 'val': 'starting'},
-        {'label': 'Câmara', 'icon': Icons.videocam_outlined, 'pngPath': null, 'color': const Color(0xFFA78BFA), 'cmd': 'scene', 'val': 'cam_frame'},
-        {'label': 'Em Jogo', 'icon': Icons.sports_esports_outlined, 'pngPath': null, 'color': const Color(0xFF22C55E), 'cmd': 'scene', 'val': 'live'},
-        {'label': 'Pausa', 'icon': Icons.pause_rounded, 'pngPath': null, 'color': const Color(0xFFFBBF24), 'cmd': 'scene', 'val': 'brb'},
-        {'label': 'Fim Live', 'icon': Icons.stop_rounded, 'pngPath': null, 'color': const Color(0xFFEF4444), 'cmd': 'scene', 'val': 'ending'},
-        {'label': 'Alerta Teste', 'icon': Icons.notifications_active_outlined, 'pngPath': null, 'color': const Color(0xFFFBBF24), 'cmd': 'test_alert', 'val': null},
-        {'label': 'Sino', 'icon': Icons.notifications_none, 'pngPath': null, 'color': const Color(0xFF38BDF8), 'cmd': 'sound', 'val': 'https://google.com'},
-        {'label': 'ÁUDIO', 'icon': Icons.power_settings_new, 'pngPath': null, 'color': const Color(0xFF22C55E), 'cmd': 'toggle_mute', 'val': null},
-      ],
-      List.generate(15, (i) => {'label': 'Livre ${i + 1}', 'icon': Icons.add, 'pngPath': null, 'color': Colors.white24, 'cmd': 'custom', 'val': ''}),
+    _buttons = [
+      {'label': 'PÂNICO SOM', 'iconKey': 'mute', 'colorVal': 0xFFEF4444, 'cmd': 'toggle_mute', 'val': null, 'imagePath': null},
+      {'label': 'MUTAR MIC', 'iconKey': 'mic', 'colorVal': 0xFFF59E0B, 'cmd': 'obs_mic_mute', 'val': 'mic', 'imagePath': null},
+      {'label': 'CENA LIVE', 'iconKey': 'scene_live', 'colorVal': 0xFF38BDF8, 'cmd': 'obs_scene_live', 'val': 'live', 'imagePath': null},
+      {'label': 'CENA CHAT', 'iconKey': 'scene_chat', 'colorVal': 0xFF1E78FF, 'cmd': 'obs_scene_chat', 'val': 'chat', 'imagePath': null},
+      {'label': 'GRAVAR REC', 'iconKey': 'record', 'colorVal': 0xFFEF4444, 'cmd': 'obs_toggle_record', 'val': 'record', 'imagePath': null},
+      {'label': 'DISPARAR ALERTA', 'iconKey': 'alert', 'colorVal': 0xFF8B5CF6, 'cmd': 'test_alert', 'val': null, 'imagePath': null},
+      {'label': 'LER CHAT TTS', 'iconKey': 'tts', 'colorVal': 0xFF10B981, 'cmd': 'tts_read_last', 'val': null, 'imagePath': null},
+      {'label': 'GIRAR ROLETA', 'iconKey': 'wheel', 'colorVal': 0xFFEC4899, 'cmd': 'wheel_spin', 'val': null, 'imagePath': null},
+      ...List.generate(
+        8,
+        (i) => {'label': 'TECLA ${i + 9}', 'iconKey': 'custom', 'colorVal': 0xFF334155, 'cmd': 'none', 'val': null, 'imagePath': null},
+      ),
     ];
   }
 
-  @override
-  void dispose() {
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    _pageCtrl.dispose();
-    super.dispose();
-  }
+  void _editKeyModal(int index) {
+    final btn = _buttons[index];
+    final labelCtrl = TextEditingController(text: btn['label']);
+    String selectedIcon = btn['iconKey'] ?? 'custom';
+    int selectedColor = btn['colorVal'] ?? 0xFF38BDF8;
+    String selectedTask = _realTasksCatalog.containsKey(btn['cmd']) ? btn['cmd'] : 'obs_scene_live';
+    String? customImg = btn['imagePath'];
 
-  void _openDeckThemePicker() {
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF0B1636),
-        title: const Text('Cor de Fundo da Consola', style: TextStyle(fontSize: 16)),
-        content: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: _deckBgOptions.map((c) {
-            return GestureDetector(
-              onTap: () {
-                setState(() => _deckBgColor = c);
-                Navigator.pop(ctx);
-              },
-              child: Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: c,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: _deckBgColor == c ? const Color(0xFF38BDF8) : Colors.white38, width: 2.5),
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF070C1B),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          padding: EdgeInsets.only(left: 18, right: 18, top: 18, bottom: MediaQuery.of(ctx).viewInsets.bottom + 18),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Personalizar Tecla #${index + 1} ($_selectedSoftware)', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8))),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: labelCtrl,
+                  decoration: const InputDecoration(labelText: 'Nome da Tecla', border: OutlineInputBorder(), isDense: true),
                 ),
-              ),
-            );
-          }).toList(),
+                const SizedBox(height: 12),
+                const Text('Tarefa Real a Executar:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white70)),
+                const SizedBox(height: 6),
+                DropdownButtonFormField<String>(
+                  value: selectedTask,
+                  dropdownColor: const Color(0xFF0B1636),
+                  isExpanded: true,
+                  decoration: const InputDecoration(border: OutlineInputBorder(), isDense: true),
+                  items: _realTasksCatalog.entries
+                      .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value, style: const TextStyle(fontSize: 12.5))))
+                      .toList(),
+                  onChanged: (v) => setModalState(() => selectedTask = v ?? 'obs_scene_live'),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF122B6B)),
+                      onPressed: () async {
+                        final res = await FilePicker.platform.pickFiles(type: FileType.image);
+                        if (res != null && res.files.single.path != null) {
+                          setModalState(() => customImg = res.files.single.path);
+                        }
+                      },
+                      icon: const Icon(Icons.image, size: 17, color: Colors.white),
+                      label: const Text('Ícone PNG/Foto', style: TextStyle(color: Colors.white, fontSize: 12)),
+                    ),
+                    if (customImg != null) ...[
+                      const SizedBox(width: 8),
+                      TextButton(onPressed: () => setModalState(() => customImg = null), child: const Text('Remover', style: TextStyle(color: Colors.redAccent))),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _iconCatalog.entries.map((entry) {
+                    final sel = selectedIcon == entry.key && customImg == null;
+                    return InkWell(
+                      onTap: () => setModalState(() {
+                        selectedIcon = entry.key;
+                        customImg = null;
+                      }),
+                      child: Container(
+                        padding: const EdgeInsets.all(9),
+                        decoration: BoxDecoration(
+                          color: sel ? Color(selectedColor) : const Color(0xFF0E1D47),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: sel ? Colors.white : Colors.white12),
+                        ),
+                        child: Icon(entry.value, size: 20, color: Colors.white),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 10,
+                  children: _colorCatalog.map((c) {
+                    final sel = selectedColor == c.value;
+                    return GestureDetector(
+                      onTap: () => setModalState(() => selectedColor = c.value),
+                      child: Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(color: c, shape: BoxShape.circle, border: Border.all(color: sel ? Colors.white : Colors.transparent, width: 2.5)),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF), padding: const EdgeInsets.symmetric(vertical: 13)),
+                    onPressed: () {
+                      setState(() {
+                        _buttons[index] = {
+                          'label': labelCtrl.text.trim().isEmpty ? 'TECLA ${index + 1}' : labelCtrl.text.trim().toUpperCase(),
+                          'iconKey': selectedIcon,
+                          'colorVal': selectedColor,
+                          'cmd': selectedTask,
+                          'val': selectedTask,
+                          'imagePath': customImg,
+                        };
+                      });
+                      Navigator.pop(ctx);
+                    },
+                    child: const Text('Guardar Tarefa da Tecla', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
-  void _openPairModal() {
-    final codeCtrl = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF0B1636),
-        title: const Text('Emparelhar Dispositivo', style: TextStyle(fontSize: 16)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  widget.onGenerateCode();
-                  Navigator.pop(ctx);
-                },
-                child: const Text('Gerar Código neste Ecrã'),
-              ),
-            ),
-            if (widget.generatedCode != null) ...[
-              const SizedBox(height: 10),
-              SelectableText(widget.generatedCode!, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: 4, color: Color(0xFF38BDF8))),
-            ],
-            const SizedBox(height: 12),
-            TextField(controller: codeCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(hintText: 'Código de 6 dígitos...')),
-          ],
+
+  void _executeKeyAction(Map<String, dynamic> b) {
+    HapticFeedback.mediumImpact();
+    final cmd = b['cmd'] as String;
+    if (cmd == 'toggle_mute') {
+      widget.onToggleMute();
+    } else if (cmd != 'none') {
+      widget.onSendCommand(cmd, {'software': _selectedSoftware, 'action': cmd, 'label': b['label']});
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          duration: const Duration(seconds: 1),
+          content: Text('⚡ Gatilho enviado para $_selectedSoftware: ${b['label']}'),
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Fechar')),
-          ElevatedButton(
-            onPressed: () {
-              if (codeCtrl.text.trim().length == 6) {
-                widget.onJoinWithCode(codeCtrl.text.trim());
-                Navigator.pop(ctx);
-              }
-            },
-            child: const Text('Ligar'),
+      );
+    }
+  }
+
+  Widget _buildSingleDeckKey(int index, Map<String, dynamic> b) {
+    final isMuteBtn = b['cmd'] == 'toggle_mute';
+    final Color accent = isMuteBtn ? (widget.isMuted ? Colors.redAccent : Colors.greenAccent) : Color(b['colorVal'] as int);
+    final IconData iconData = isMuteBtn ? (widget.isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded) : (_iconCatalog[b['iconKey']] ?? Icons.bolt_rounded);
+    final String? imgPath = b['imagePath'];
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF15203B), Color(0xFF0A0F1D)],
+        ),
+        border: Border.all(color: accent.withOpacity(0.55), width: 1.5),
+        boxShadow: [BoxShadow(color: accent.withOpacity(0.22), blurRadius: 10, offset: const Offset(0, 4))],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          if (imgPath != null)
+            ClipRRect(borderRadius: BorderRadius.circular(10), child: Image.file(File(imgPath), width: 34, height: 34, fit: BoxFit.cover))
+          else
+            Icon(iconData, size: _rows == 2 ? 32 : 24, color: accent),
+          const SizedBox(height: 6),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: Text(
+              isMuteBtn ? (widget.isMuted ? 'CORTADO' : 'SOM ATIVO') : (b['label'] as String),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: _rows == 2 ? 11 : 10, letterSpacing: 0.3),
+            ),
           ),
         ],
       ),
     );
   }
 
-  void _editButton(int pageIdx, int btnIdx) {
-    final btn = _pages[pageIdx][btnIdx];
-    final nameCtrl = TextEditingController(text: btn['label']);
-    final urlCtrl = TextEditingController(text: btn['val']?.toString() ?? '');
-    IconData selectedIcon = btn['icon'] as IconData;
-    String? selectedPng = btn['pngPath'] as String?;
-    Color selectedColor = (btn['color'] == Colors.white24) ? const Color(0xFF38BDF8) : (btn['color'] as Color);
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModalState) => AlertDialog(
-          backgroundColor: const Color(0xFF0B1636),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('Personalizar Tecla', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-              Row(
-                children: [
-                  if (btnIdx > 0)
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back, size: 18),
-                      tooltip: 'Mover Esquerda',
-                      onPressed: () {
-                        setState(() {
-                          final tmp = _pages[pageIdx][btnIdx - 1];
-                          _pages[pageIdx][btnIdx - 1] = _pages[pageIdx][btnIdx];
-                          _pages[pageIdx][btnIdx] = tmp;
-                        });
-                        Navigator.pop(ctx);
-                      },
-                    ),
-                  if (btnIdx < _pages[pageIdx].length - 1)
-                    IconButton(
-                      icon: const Icon(Icons.arrow_forward, size: 18),
-                      tooltip: 'Mover Direita',
-                      onPressed: () {
-                        setState(() {
-                          final tmp = _pages[pageIdx][btnIdx + 1];
-                          _pages[pageIdx][btnIdx + 1] = _pages[pageIdx][btnIdx];
-                          _pages[pageIdx][btnIdx] = tmp;
-                        });
-                        Navigator.pop(ctx);
-                      },
-                    ),
-                ],
-              ),
-            ],
-          ),
-          content: SizedBox(
-            width: 430,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(child: TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Nome da Tecla', isDense: true))),
-                      const SizedBox(width: 10),
-                      OutlinedButton.icon(
-                        onPressed: () async {
-                          final res = await FilePicker.platform.pickFiles(type: FileType.image);
-                          if (res != null && res.files.single.path != null) {
-                            setModalState(() => selectedPng = res.files.single.path);
-                          }
-                        },
-                        icon: const Icon(Icons.image_outlined, size: 18),
-                        label: Text(selectedPng != null ? 'PNG Ativo' : 'Carregar PNG', style: const TextStyle(fontSize: 12)),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: _accentColors.map((c) {
-                      final isSel = selectedColor.value == c.value;
-                      return GestureDetector(
-                        onTap: () => setModalState(() => selectedColor = c),
-                        child: Container(
-                          margin: const EdgeInsets.only(right: 8),
-                          width: 24,
-                          height: 24,
-                          decoration: BoxDecoration(color: c, shape: BoxShape.circle, border: isSel ? Border.all(color: Colors.white, width: 2) : null),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    height: 105,
-                    child: GridView.builder(
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 8, crossAxisSpacing: 6, mainAxisSpacing: 6),
-                      itemCount: _iconLibrary.length,
-                      itemBuilder: (_, i) {
-                        final ic = _iconLibrary[i];
-                        final active = selectedPng == null && selectedIcon == ic;
-                        return InkWell(
-                          onTap: () => setModalState(() {
-                            selectedPng = null;
-                            selectedIcon = ic;
-                          }),
-                          borderRadius: BorderRadius.circular(8),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: active ? selectedColor.withOpacity(0.25) : Colors.white.withOpacity(0.05),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: active ? selectedColor : Colors.transparent),
-                            ),
-                            child: Icon(ic, size: 18, color: active ? selectedColor : Colors.white70),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(child: TextField(controller: urlCtrl, decoration: const InputDecoration(labelText: 'Som (.MP3 / Link)', isDense: true))),
-                      IconButton(
-                        icon: const Icon(Icons.audio_file_outlined),
-                        onPressed: () async {
-                          final res = await FilePicker.platform.pickFiles(type: FileType.audio);
-                          if (res != null && res.files.single.path != null) {
-                            setModalState(() => urlCtrl.text = res.files.single.path!);
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  _pages[pageIdx][btnIdx]['label'] = nameCtrl.text.trim().isEmpty ? 'Tecla' : nameCtrl.text.trim();
-                  _pages[pageIdx][btnIdx]['icon'] = selectedIcon;
-                  _pages[pageIdx][btnIdx]['pngPath'] = selectedPng;
-                  _pages[pageIdx][btnIdx]['color'] = selectedColor;
-                  if (urlCtrl.text.trim().isNotEmpty) {
-                    _pages[pageIdx][btnIdx]['cmd'] = 'sound';
-                    _pages[pageIdx][btnIdx]['val'] = urlCtrl.text.trim();
-                  } else if (_pages[pageIdx][btnIdx]['cmd'] == 'custom') {
-                    _pages[pageIdx][btnIdx]['cmd'] = 'configured';
-                  }
-                });
-                Navigator.pop(ctx);
-              },
-              child: const Text('Guardar'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
   @override
   Widget build(BuildContext context) {
-    final keySurface = Color.lerp(_deckBgColor, Colors.white, 0.06)!;
-    final itemsPerPage = (_cols * _rows).clamp(1, 15);
+    final totalButtons = _cols * _rows;
+    final visibleButtons = _buttons.take(totalButtons).toList();
+    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
 
     return Scaffold(
-      backgroundColor: _deckBgColor,
+      backgroundColor: const Color(0xFF040711),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-          child: Column(
-            children: [
-              Row(
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(color: const Color(0xFF090F22), border: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.08)))),
+              child: Row(
                 children: [
+                  IconButton(icon: const Icon(Icons.arrow_back_ios_new, size: 18, color: Color(0xFF38BDF8)), onPressed: widget.onMinimizeDeck),
+                  const Text('STREAM DECK PRO', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.5, fontSize: 13)),
+                  const Spacer(),
+                  DropdownButton<String>(
+                    value: _selectedSoftware,
+                    dropdownColor: const Color(0xFF0B1636),
+                    underline: const SizedBox(),
+                    style: const TextStyle(fontSize: 11.5, color: Color(0xFF38BDF8), fontWeight: FontWeight.bold),
+                    items: const [
+                      DropdownMenuItem(value: 'OBS Studio', child: Text('OBS Studio')),
+                      DropdownMenuItem(value: 'Streamlabs', child: Text('Streamlabs')),
+                      DropdownMenuItem(value: 'TikTok Live Studio', child: Text('TikTok Live Studio')),
+                    ],
+                    onChanged: (v) => setState(() => _selectedSoftware = v ?? 'OBS Studio'),
+                  ),
+                  const SizedBox(width: 8),
                   DropdownButton<String>(
                     value: '${_cols}x$_rows',
+                    dropdownColor: const Color(0xFF0B1636),
                     underline: const SizedBox(),
-                    dropdownColor: keySurface,
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white70),
+                    style: const TextStyle(fontSize: 11.5, color: Colors.white70, fontWeight: FontWeight.bold),
                     items: const [
-                      DropdownMenuItem(value: '5x3', child: Text('5 × 3')),
-                      DropdownMenuItem(value: '4x3', child: Text('4 × 3')),
-                      DropdownMenuItem(value: '4x2', child: Text('4 × 2')),
-                      DropdownMenuItem(value: '3x2', child: Text('3 × 2')),
+                      DropdownMenuItem(value: '4x2', child: Text('4×2')),
+                      DropdownMenuItem(value: '4x3', child: Text('4×3')),
+                      DropdownMenuItem(value: '4x4', child: Text('4×4')),
                     ],
-                    onChanged: (val) {
-                      if (val != null) {
-                        final parts = val.split('x');
+                    onChanged: (v) {
+                      if (v != null) {
+                        final parts = v.split('x');
                         setState(() {
-                         _cols = int.parse(parts.first);
+                          _cols = int.parse(parts.first);
                           _rows = int.parse(parts.last);
                         });
                       }
                     },
                   ),
-                  IconButton(icon: const Icon(Icons.palette_outlined, size: 19), tooltip: 'Cor de Fundo', onPressed: _openDeckThemePicker),
-                  IconButton(icon: const Icon(Icons.link_rounded, size: 19), tooltip: 'Emparelhar', onPressed: _openPairModal),
-                  IconButton(
-                    icon: const Icon(Icons.add_rounded, size: 20),
-                    tooltip: 'Adicionar Página',
-                    onPressed: () => setState(() => _pages.add(List.generate(15, (i) => {'label': 'Livre ${i + 1}', 'icon': Icons.add, 'pngPath': null, 'color': Colors.white24, 'cmd': 'custom', 'val': ''}))),
-                  ),
-                  const Spacer(),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Image.asset('icon.png', height: 20, errorBuilder: (_, __, ___) => const Icon(Icons.local_fire_department, color: Color(0xFF38BDF8), size: 18)),
-                      const SizedBox(width: 4),
-                      const Text('ELL ', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14, letterSpacing: 3, color: Colors.white)),
-                      const Text('LIVE', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14, letterSpacing: 3, color: Color(0xFF38BDF8))),
-                    ],
-                  ),
-                  const Spacer(),
-                  if (widget.generatedCode != null)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 10),
-                      child: Text(widget.generatedCode!, style: const TextStyle(fontSize: 12, letterSpacing: 2, color: Color(0xFF38BDF8), fontWeight: FontWeight.w700)),
-                    ),
-                  GestureDetector(
-                    onTap: widget.onToggleMute,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: (widget.isMuted ? const Color(0xFFEF4444) : const Color(0xFF22C55E)).withOpacity(0.16),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: widget.isMuted ? const Color(0xFFEF4444) : const Color(0xFF22C55E), width: 1),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(widget.isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded, color: widget.isMuted ? const Color(0xFFEF4444) : const Color(0xFF22C55E), size: 15),
-                          const SizedBox(width: 5),
-                          Text(
-                            widget.isMuted ? 'MUDO' : 'ATIVO',
-                            style: TextStyle(color: widget.isMuted ? const Color(0xFFEF4444) : const Color(0xFF22C55E), fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(icon: const Icon(Icons.minimize_rounded, size: 20), tooltip: 'Minimizar', onPressed: widget.onMinimizeDeck),
                 ],
               ),
-              const SizedBox(height: 8),
-              Expanded(
-                child: PageView.builder(
-                  controller: _pageCtrl,
-                  onPageChanged: (p) => setState(() => _currentPage = p),
-                  itemCount: _pages.length,
-                  itemBuilder: (ctx, pageIdx) {
-                    final btns = _pages[pageIdx].take(itemsPerPage).toList();
-                    return LayoutBuilder(
-                      builder: (context, constraints) {
-                        final itemW = (constraints.maxWidth - (_cols - 1) * 10) / _cols;
-                        final itemH = (constraints.maxHeight - (_rows - 1) * 10) / _rows;
-                        return GridView.builder(
-                          physics: const NeverScrollableScrollPhysics(),
-                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: _cols,
-                            crossAxisSpacing: 10,
-                            mainAxisSpacing: 10,
-                            childAspectRatio: itemW / itemH,
-                          ),
-                          itemCount: btns.length,
-                          itemBuilder: (ctx, i) {
-                            final b = btns[i];
-                            final isMuteBtn = b['cmd'] == 'toggle_mute';
-                            final isCustomEmpty = b['cmd'] == 'custom' && b['pngPath'] == null;
-                            final String? pngPath = b['pngPath'] as String?;
-                            final Color accent = isMuteBtn
-                                ? (widget.isMuted ? const Color(0xFFEF4444) : const Color(0xFF22C55E))
-                                : (b['color'] as Color);
+            ),
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                'Toca para executar · Pressiona longo para personalizar · Arrasta para trocar de lugar',
+                style: TextStyle(fontSize: 10.5, color: Colors.white.withOpacity(0.5)),
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: isLandscape ? 20 : 12, vertical: 10),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    const spacing = 10.0;
+                    final tileW = (constraints.maxWidth - (spacing * (_cols - 1))) / _cols;
+                    final tileH = (constraints.maxHeight - (spacing * (_rows - 1))) / _rows;
 
-                            return Material(
-                              color: keySurface,
-                              borderRadius: BorderRadius.circular(14),
-                              child: InkWell(
-                                onTap: () {
-                                  if (isMuteBtn) {
-                                    widget.onToggleMute();
-                                  } else {
-                                    widget.onSendCommand(b['cmd'] as String, b['val']);
-                                  }
-                                },
-                                onLongPress: () => _editButton(pageIdx, i),
-                                borderRadius: BorderRadius.circular(14),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(14),
-                                    border: Border.all(color: isCustomEmpty ? Colors.white10 : accent.withOpacity(0.38), width: 1),
-                                  ),
-                                  child: Stack(
-                                    alignment: Alignment.center,
-                                    children: [
-                                      if (isCustomEmpty)
-                                        Text('HELL', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 11, letterSpacing: 3, color: Colors.white.withOpacity(0.08)))
-                                      else
-                                        Column(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            if (pngPath != null)
-                                              ClipRRect(
-                                                borderRadius: BorderRadius.circular(6),
-                                                child: Image.file(File(pngPath), width: _rows == 2 ? 34 : 26, height: _rows == 2 ? 34 : 26, fit: BoxFit.cover),
-                                              )
-                                            else
-                                              Icon(
-                                                isMuteBtn ? (widget.isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded) : (b['icon'] as IconData),
-                                                color: accent,
-                                                size: _rows == 2 ? 26 : 21,
-                                              ),
-                                            const SizedBox(height: 5),
-                                                                                        Padding(
-                                              padding: const EdgeInsets.symmetric(horizontal: 6),
-                                              child: Text(
-                                                isMuteBtn ? (widget.isMuted ? 'CORTADO' : 'SOM ATIVO') : (b['label'] as String),
-                                                textAlign: TextAlign.center,
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: TextStyle(fontWeight: FontWeight.w600, fontSize: _rows == 2 ? 11.5 : 10.5, letterSpacing: 0.3),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      if (!isCustomEmpty)
-                                        Positioned(
-                                          bottom: 0,
-                                          child: Container(
-                                            width: 24,
-                                            height: 2.5,
-                                            decoration: BoxDecoration(
-                                              color: accent.withOpacity(0.85),
-
-                                              borderRadius: const BorderRadius.vertical(top: Radius.circular(2)),
-                                            ),
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
+                    return GridView.builder(
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: visibleButtons.length,
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: _cols,
+                        crossAxisSpacing: spacing,
+                        mainAxisSpacing: spacing,
+                        childAspectRatio: tileW / tileH,
+                      ),
+                      itemBuilder: (ctx, index) {
+                        final b = visibleButtons[index];
+                        return DragTarget<int>(
+                          onAcceptWithDetails: (details) {
+                            final fromIdx = details.data;
+                            if (fromIdx != index) {
+                              setState(() {
+                                final temp = _buttons[fromIdx];
+                                _buttons[fromIdx] = _buttons[index];
+                                _buttons[index] = temp;
+                              });
+                            }
+                          },
+                          builder: (context, candidateData, rejectedData) {
+                            return Draggable<int>(
+                              data: index,
+                              feedback: Material(
+                                color: Colors.transparent,
+                                child: SizedBox(width: tileW, height: tileH, child: _buildSingleDeckKey(index, b)),
+                              ),
+                              childWhenDragging: Opacity(opacity: 0.3, child: _buildSingleDeckKey(index, b)),
+                              child: GestureDetector(
+                                onTap: () => _executeKeyAction(b),
+                                onLongPress: () => _editKeyModal(index),
+                                child: _buildSingleDeckKey(index, b),
                               ),
                             );
                           },
@@ -556,25 +401,8 @@ class _StreamDeckScreenState extends State<StreamDeckScreen> {
                   },
                 ),
               ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(_pages.length, (index) {
-                  final active = _currentPage == index;
-                  return AnimatedContainer(
-                    duration: const Duration(milliseconds: 220),
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    width: active ? 18 : 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: active ? const Color(0xFF38BDF8) : Colors.white24,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  );
-                }),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
