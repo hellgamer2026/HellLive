@@ -148,14 +148,30 @@ class DefaultMediaLibrary {
   ];
 
   static final List<Map<String, String>> builtInSounds = [
-    {'name': 'Aplausos Plateia', 'url': 'https://google.com'},
-    {'name': 'Moeda / Vitória', 'url': 'https://google.com'},
-    {'name': 'Buzina Épica', 'url': 'https://google.com'},
-    {'name': 'Sino de Alerta', 'url': 'https://google.com'},
-    {'name': 'Tambor Suspense', 'url': 'https://google.com'},
-    {'name': 'Foguetes Festa', 'url': 'https://google.com'},
-    {'name': 'Laser Sci-Fi', 'url': 'https://google.com'},
-    {'name': 'Level Up / Pop', 'url': 'https://google.com'},
+    {'name': 'Aplausos Plateia', 'cat': 'Vitória', 'url': 'https://google.com'},
+    {'name': 'Moeda / Vitória', 'cat': 'Gaming', 'url': 'https://google.com'},
+    {'name': 'Buzina Épica', 'cat': 'Meme', 'url': 'https://google.com'},
+    {'name': 'Sino de Alerta', 'cat': 'Notificação', 'url': 'https://google.com'},
+    {'name': 'Tambor Suspense', 'cat': 'Meme', 'url': 'https://google.com'},
+    {'name': 'Foguetes Festa', 'cat': 'Vitória', 'url': 'https://google.com'},
+    {'name': 'Laser Sci-Fi', 'cat': 'Sci-Fi', 'url': 'https://google.com'},
+    {'name': 'Level Up / Pop', 'cat': 'Gaming', 'url': 'https://google.com'},
+  ];
+
+  // Repositório Online Extenso de Sons Gratuitos (Estilo TikFinity Soundboard)
+  static final List<Map<String, String>> onlineSoundsRepository = [
+    {'name': 'Explosão Épica Dinamite', 'cat': 'Ação', 'url': 'https://google.com'},
+    {'name': 'Fogos de Artifício Final', 'cat': 'Vitória', 'url': 'https://google.com'},
+    {'name': 'Multidão a Vibrar Estádio', 'cat': 'Vitória', 'url': 'https://google.com'},
+    {'name': 'Buzina de Caminhão Meme', 'cat': 'Meme', 'url': 'https://google.com'},
+    {'name': 'Sirene Alerta Vermelho', 'cat': 'Alerta', 'url': 'https://google.com'},
+    {'name': 'Boing Cartoon Engraçado', 'cat': 'Meme', 'url': 'https://google.com'},
+    {'name': 'Cowbell Ritmo', 'cat': 'Meme', 'url': 'https://google.com'},
+    {'name': 'Sino de Boxe Round', 'cat': 'Gaming', 'url': 'https://google.com'},
+    {'name': 'Nave Espacial Descolar', 'cat': 'Sci-Fi', 'url': 'https://google.com'},
+    {'name': 'Trovão Tempestade', 'cat': 'Ação', 'url': 'https://google.com'},
+    {'name': 'Pop Bolha Rápido', 'cat': 'Notificação', 'url': 'https://google.com'},
+    {'name': 'Rufar de Tambores', 'cat': 'Suspense', 'url': 'https://google.com'},
   ];
 
   static final List<Map<String, String>> builtInGifsAndPngs = [
@@ -165,10 +181,12 @@ class DefaultMediaLibrary {
     {'name': 'Festa Néon (GIF)', 'url': 'https://giphy.com'},
     {'name': 'GG Vitória (GIF)', 'url': 'https://giphy.com'},
     {'name': 'Novo Seguidor (GIF)', 'url': 'https://giphy.com'},
+    {'name': 'Foguetão Espacial (PNG)', 'url': 'https://flaticon.com'},
     {'name': 'Coroa Dourada (PNG)', 'url': 'https://flaticon.com'},
     {'name': 'Troféu VIP (PNG)', 'url': 'https://flaticon.com'},
     {'name': 'Diamante Azul (PNG)', 'url': 'https://flaticon.com'},
     {'name': 'Fogo Épico (PNG)', 'url': 'https://flaticon.com'},
+    {'name': 'Dinamite & Bomba (PNG)', 'url': 'https://flaticon.com'},
   ];
 
   static final List<Map<String, String>> royaltyFreeMusicRepo = [
