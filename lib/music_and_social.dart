@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'app_data.dart';
 
 class MusicBackgroundScreen extends StatefulWidget {
   final AudioPlayer bgPlayer;
@@ -17,20 +18,15 @@ class _MusicBackgroundScreenState extends State<MusicBackgroundScreen> {
   bool _isPlaying = false;
   int _currentIndex = 0;
 
-  final List<Map<String, String>> _playlist = [
-    {'title': 'Chill Lo-Fi Stream (Sem Copyright)', 'source': 'https://google.com', 'type': 'url'},
-    {'title': 'Synthwave Cyber Arena', 'source': 'https://google.com', 'type': 'url'},
-  ];
+  final List<Map<String, String>> _localPlaylist = [];
 
-  Future<void> _playCurrent() async {
-    if (_playlist.isEmpty) return;
-    final track = _playlist[_currentIndex];
+  Future<void> _playTrack(String title, String source, String type) async {
     await widget.bgPlayer.setVolume(_volume);
     await widget.bgPlayer.setReleaseMode(ReleaseMode.loop);
-    if (track['type'] == 'file') {
-      await widget.bgPlayer.play(DeviceFileSource(track['source']!));
+    if (type == 'file') {
+      await widget.bgPlayer.play(DeviceFileSource(source));
     } else {
-      await widget.bgPlayer.play(UrlSource(track['source']!));
+      await widget.bgPlayer.play(UrlSource(source));
     }
     setState(() => _isPlaying = true);
   }
@@ -45,170 +41,231 @@ class _MusicBackgroundScreenState extends State<MusicBackgroundScreen> {
     setState(() => _isPlaying = false);
   }
 
-  Future<void> _nextTrack() async {
-    if (_playlist.isEmpty) return;
-    setState(() => _currentIndex = (_currentIndex + 1) % _playlist.length);
-    await _playCurrent();
-  }
-
   Future<void> _pickLocalTracks() async {
     final res = await FilePicker.platform.pickFiles(type: FileType.audio, allowMultiple: true);
     if (res != null && res.files.isNotEmpty) {
       setState(() {
         for (final f in res.files) {
           if (f.path != null) {
-            _playlist.add({'title': f.name, 'source': f.path!, 'type': 'file'});
+            _localPlaylist.add({'title': f.name, 'source': f.path!, 'type': 'file'});
           }
         }
       });
-      if (!_isPlaying) {
-        _currentIndex = _playlist.length - res.files.length;
-        await _playCurrent();
+      if (!_isPlaying && _localPlaylist.isNotEmpty) {
+        _currentIndex = 0;
+        final t = _localPlaylist.first;
+        await _playTrack(t['title']!, t['source']!, 'file');
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final currentTitle = _playlist.isEmpty ? 'Nenhuma faixa selecionada' : _playlist[_currentIndex]['title']!;
+    final repoList = DefaultMediaLibrary.royaltyFreeMusicRepo;
+    final activeTitle = _localPlaylist.isNotEmpty && _currentIndex < _localPlaylist.length
+        ? _localPlaylist[_currentIndex]['title']!
+        : (repoList.isNotEmpty ? repoList[_currentIndex % repoList.length]['title']! : 'Nenhuma música selecionada');
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(colors: [Color(0xFF0E1D47), Color(0xFF08112B)]),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFF1E429F)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('🎵 Serviços de Streaming Conectados', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF38BDF8))),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1DB954), padding: const EdgeInsets.symmetric(vertical: 12)),
-                      onPressed: () => launchUrl(Uri.parse('https://spotify.com'), mode: LaunchMode.externalApplication),
-                      icon: const Icon(Icons.music_note, color: Colors.white),
-                      label: const Text('Spotify', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF0000), padding: const EdgeInsets.symmetric(vertical: 12)),
-                      onPressed: () => launchUrl(Uri.parse('https://youtube.com'), mode: LaunchMode.externalApplication),
-                      icon: const Icon(Icons.play_circle_fill, color: Colors.white),
-                      label: const Text('YT Music', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _playlistUrlCtrl,
-                      decoration: const InputDecoration(hintText: 'Colar link de playlist Spotify / YT Music...', isDense: true, border: OutlineInputBorder()),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: const Icon(Icons.open_in_new, color: Color(0xFF38BDF8)),
-                    tooltip: 'Abrir Playlist',
-                    onPressed: () {
-                      final uri = Uri.tryParse(_playlistUrlCtrl.text.trim());
-                      if (uri != null) launchUrl(uri, mode: LaunchMode.externalApplication);
-                    },
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 14),
-        Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(colors: [Color(0xFF0E1D47), Color(0xFF08112B)]),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFF38BDF8), width: 1.3),
-          ),
-          child: Column(
-            children: [
-              const Text('MÚSICA DE FUNDO NA TRANSMISSÃO', style: TextStyle(fontSize: 10.5, letterSpacing: 2, color: Color(0xFF38BDF8), fontWeight: FontWeight.bold)),
-              const SizedBox(height: 6),
-              Text(currentTitle, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 14),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  IconButton(iconSize: 38, color: Colors.greenAccent, tooltip: 'Iniciar Música', icon: const Icon(Icons.play_circle_filled), onPressed: _playCurrent),
-                  const SizedBox(width: 10),
-                  IconButton(iconSize: 38, color: Colors.amberAccent, tooltip: 'Pausar', icon: const Icon(Icons.pause_circle_filled), onPressed: _pauseMusic),
-                  const SizedBox(width: 10),
-                  IconButton(iconSize: 38, color: Colors.redAccent, tooltip: 'Encerrar Música', icon: const Icon(Icons.stop_circle), onPressed: _stopMusic),
-                  const SizedBox(width: 10),
-                  IconButton(iconSize: 34, color: const Color(0xFF38BDF8), tooltip: 'Próxima Faixa', icon: const Icon(Icons.skip_next_rounded), onPressed: _nextTrack),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  const Icon(Icons.volume_down, color: Colors.white70),
-                  Expanded(
-                    child: Slider(
-                      value: _volume,
-                      min: 0.0,
-                      max: 1.0,
-                      activeColor: const Color(0xFF38BDF8),
-                      onChanged: (v) async {
-                        setState(() => _volume = v);
-                        await widget.bgPlayer.setVolume(v);
+    return DefaultTabController(
+      length: 2,
+      child: Column(
+        children: [
+          // Mesa Superior Fixa: Música de Fundo & Controlos da Live
+          Container(
+            margin: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [Color(0xFF0E1D47), Color(0xFF08112B)]),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFF38BDF8), width: 1.3),
+            ),
+            child: Column(
+              children: [
+                const Text('MÚSICA DE FUNDO', style: TextStyle(fontSize: 12, letterSpacing: 2, color: Color(0xFF38BDF8), fontWeight: FontWeight.w900)),
+                const SizedBox(height: 4),
+                Text(activeTitle, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      iconSize: 36,
+                      color: Colors.greenAccent,
+                      tooltip: 'Iniciar',
+                      icon: const Icon(Icons.play_circle_filled),
+                      onPressed: () {
+                        if (_localPlaylist.isNotEmpty) {
+                          final t = _localPlaylist[_currentIndex % _localPlaylist.length];
+                          _playTrack(t['title']!, t['source']!, 'file');
+                        } else {
+                          final r = repoList[_currentIndex % repoList.length];
+                          _playTrack(r['title']!, r['url']!, 'url');
+                        }
                       },
                     ),
-                  ),
-                  Text('${(_volume * 100).round()}%', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF38BDF8))),
-                ],
-              ),
+                    const SizedBox(width: 8),
+                    IconButton(iconSize: 36, color: Colors.amberAccent, tooltip: 'Pausar', icon: const Icon(Icons.pause_circle_filled), onPressed: _pauseMusic),
+                    const SizedBox(width: 8),
+                    IconButton(iconSize: 36, color: Colors.redAccent, tooltip: 'Encerrar', icon: const Icon(Icons.stop_circle), onPressed: _stopMusic),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      iconSize: 32,
+                      color: const Color(0xFF38BDF8),
+                      tooltip: 'Próxima',
+                      icon: const Icon(Icons.skip_next_rounded),
+                      onPressed: () {
+                        setState(() => _currentIndex++);
+                        if (_localPlaylist.isNotEmpty) {
+                          final t = _localPlaylist[_currentIndex % _localPlaylist.length];
+                          _playTrack(t['title']!, t['source']!, 'file');
+                        } else {
+                          final r = repoList[_currentIndex % repoList.length];
+                          _playTrack(r['title']!, r['url']!, 'url');
+                        }
+                      },
+                    ),
+                  ],
+                ),
+                Row(
+                  children: [
+                    const Icon(Icons.volume_down, size: 20, color: Colors.white70),
+                    Expanded(
+                      child: Slider(
+                        value: _volume,
+                        min: 0.0,
+                        max: 1.0,
+                        activeColor: const Color(0xFF38BDF8),
+                        onChanged: (v) async {
+                          setState(() => _volume = v);
+                          await widget.bgPlayer.setVolume(v);
+                        },
+                      ),
+                    ),
+                    Text('${(_volume * 100).round()}%', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF38BDF8))),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const TabBar(
+            indicatorColor: Color(0xFF38BDF8),
+            labelColor: Color(0xFF38BDF8),
+            unselectedLabelColor: Colors.white54,
+            tabs: [
+              Tab(text: '📂 Música Local & Apps'),
+              Tab(text: '🌐 Sem Direitos Autorais'),
             ],
           ),
-        ),
-        const SizedBox(height: 14),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text('📂 Minhas Músicas & Playlists Locais', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF)),
-              onPressed: _pickLocalTracks,
-              icon: const Icon(Icons.library_music, size: 18, color: Colors.white),
-              label: const Text('+ Carregar MP3', style: TextStyle(color: Colors.white, fontSize: 12)),
+          Expanded(
+            child: TabBarView(
+              children: [
+                // 1. Música Local & Streaming (Spotify / YT Music)
+                ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1DB954), padding: const EdgeInsets.symmetric(vertical: 11)),
+                            onPressed: () => launchUrl(Uri.parse('https://spotify.com'), mode: LaunchMode.externalApplication),
+                            icon: const Icon(Icons.music_note, color: Colors.white),
+                            label: const Text('Spotify', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF0000), padding: const EdgeInsets.symmetric(vertical: 11)),
+                            onPressed: () => launchUrl(Uri.parse('https://youtube.com'), mode: LaunchMode.externalApplication),
+                            icon: const Icon(Icons.play_circle_fill, color: Colors.white),
+                            label: const Text('YT Music', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _playlistUrlCtrl,
+                            decoration: const InputDecoration(hintText: 'Colar link de playlist...', isDense: true, border: OutlineInputBorder()),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.open_in_new, color: Color(0xFF38BDF8)),
+                          onPressed: () {
+                            final uri = Uri.tryParse(_playlistUrlCtrl.text.trim());
+                            if (uri != null) launchUrl(uri, mode: LaunchMode.externalApplication);
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Música Local', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8))),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF)),
+                          onPressed: _pickLocalTracks,
+                          icon: const Icon(Icons.add, size: 18, color: Colors.white),
+                          label: const Text('+ Adicionar Playlist / Músicas', style: TextStyle(color: Colors.white, fontSize: 11.5)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    if (_localPlaylist.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.all(20),
+                        child: Center(child: Text('Carrega músicas MP3 ou playlists guardadas no teu aparelho.', style: TextStyle(color: Colors.white54, fontSize: 12.5))),
+                      )
+                    else
+                      ..._localPlaylist.asMap().entries.map((e) => Card(
+                            color: const Color(0xFF0B1636),
+                            child: ListTile(
+                              dense: true,
+                              leading: const Icon(Icons.audiotrack, color: Color(0xFF38BDF8)),
+                              title: Text(e.value['title'] ?? '', maxLines: 1, overflow: TextOverflow.ellipsis),
+                              onTap: () {
+                                setState(() => _currentIndex = e.key);
+                                _playTrack(e.value['title']!, e.value['source']!, 'file');
+                              },
+                            ),
+                          )),
+                  ],
+                ),
+                // 2. Repositório Online Sem Direitos Autorais
+                ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    const Text('Biblioteca Online Sem Direitos Autorais (100% Grátis para Live)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8))),
+                    const SizedBox(height: 10),
+                    ...repoList.asMap().entries.map((e) => Card(
+                          color: const Color(0xFF0B1636),
+                          child: ListTile(
+                            leading: const Icon(Icons.library_music, color: Colors.greenAccent),
+                            title: Text(e.value['title']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
+                            subtitle: Text(e.value['artist']!, style: const TextStyle(fontSize: 11.5, color: Colors.white60)),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.play_arrow, color: Color(0xFF38BDF8)),
+                              onPressed: () {
+                                _localPlaylist.clear();
+                                setState(() => _currentIndex = e.key);
+                                _playTrack(e.value['title']!, e.value['url']!, 'url');
+                              },
+                            ),
+                          ),
+                        )),
+                  ],
+                ),
+              ],
             ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        ..._playlist.asMap().entries.map((e) {
-          final active = e.key == _currentIndex && _isPlaying;
-          return Card(
-            color: active ? const Color(0xFF122B6B) : const Color(0xFF0B1636),
-            child: ListTile(
-              dense: true,
-              leading: Icon(active ? Icons.graphic_eq : Icons.music_note, color: active ? Colors.greenAccent : const Color(0xFF38BDF8)),
-              title: Text(e.value['title'] ?? '', maxLines: 1, overflow: TextOverflow.ellipsis),
-              onTap: () async {
-                setState(() => _currentIndex = e.key);
-                await _playCurrent();
-              },
-            ),
-          );
-        }),
-      ],
+          ),
+        ],
+      ),
     );
   }
 }
