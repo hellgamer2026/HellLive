@@ -2072,8 +2072,13 @@ class _MainShellState extends State<MainShell> {
                               CircleAvatar(
                                 radius: 17,
                                 backgroundColor: const Color(0xFF1E78FF),
-                                backgroundImage: widget.user['avatarPath'] != null ? FileImage(File(widget.user['avatarPath'])) : null,
-                                child: widget.user['avatarPath'] == null ? const Icon(Icons.person, size: 18, color: Colors.white) : null,
+                                backgroundImage: widget.user['avatarPath'] != null
+                                    ? FileImage(File(widget.user['avatarPath']))
+                                    : (widget.user['avatarUrl'] != null ? NetworkImage(widget.user['avatarUrl']) as ImageProvider : null),
+                                child: (widget.user['avatarPath'] == null && widget.user['avatarUrl'] == null)
+                                    ? const Icon(Icons.person, size: 18, color: Colors.white)
+                                    : null,
+
                               ),
                               Container(
                                 width: 10,
