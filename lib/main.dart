@@ -1962,7 +1962,8 @@ class _MainShellState extends State<MainShell> {
       const AboutHellLiveScreen(),
       _buildSettingsTab(),
       MusicBackgroundScreen(bgPlayer: bgMusicPlayer),
-      HelpAndFaqScreen(),
+            ListView(padding: const EdgeInsets.all(16), children: const [ListTile(leading: Icon(Icons.support_agent, color: Color(0xFF38BDF8)), title: Text('Suporte Oficial HELL Live'), subtitle: Text('hellgamer2026@gmail.com'))]),
+
       ProfilePrivacySecurityScreen(user: widget.user, onUserUpdated: widget.onUserUpdated, onLogout: widget.onLogout),
     ];
 
