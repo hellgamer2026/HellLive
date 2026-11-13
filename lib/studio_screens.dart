@@ -23,54 +23,87 @@ class OverlayStudioScreen extends StatefulWidget {
 }
 
 class _OverlayStudioScreenState extends State<OverlayStudioScreen> {
-  final TextEditingController _giftSearchCtrl = TextEditingController();
-  late final List<Map<String, dynamic>> _all1119Gifts;
-  String _searchQuery = '';
   bool _isProMember = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _all1119Gifts = DefaultMediaLibrary.generate1119GiftsDatabase();
-  }
-
-  @override
-  void dispose() {
-    _giftSearchCtrl.dispose();
-    super.dispose();
-  }
-
-  void _openProDialog() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF0B1636),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: const BorderSide(color: Color(0xFFF59E0B), width: 1.5)),
-        title: const Row(
-          children: [
-            Icon(Icons.workspace_premium, color: Color(0xFFF59E0B)),
-            SizedBox(width: 8),
-            Text('HELL Live PRO & Marketplace'),
-          ],
-        ),
-        content: const Text(
-          'Desbloqueia o Estúdio Criador para publicar os teus próprios Overlays, Roletas e Packs de Sons no Marketplace Oficial HELL Live!',
-          style: TextStyle(color: Colors.white70, fontSize: 13.5),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Fechar')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF59E0B)),
-            onPressed: () {
-              setState(() => _isProMember = true);
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('🎉 Plano PRO ativado com sucesso!')));
-            },
-            child: const Text('Ativar PRO (4.99 €/mês)', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+  Widget _buildLiveOverlayPreview(String type, String title) {
+    switch (type) {
+      case 'bar':
+        return Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(color: const Color(0xFF04091A), borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFF38BDF8).withOpacity(0.5))),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(title, style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Colors.white)),
+                  const Text('75%', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8))),
+                ],
+              ),
+              const SizedBox(height: 6),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: const LinearProgressIndicator(value: 0.75, minHeight: 8, backgroundColor: Colors.white12, valueColor: AlwaysStoppedAnimation(Color(0xFF38BDF8))),
+              ),
+            ],
           ),
-        ],
-      ),
-    );
+        );
+      case 'timer':
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+          decoration: BoxDecoration(color: const Color(0xFF04091A), borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.amberAccent.withOpacity(0.6))),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('⏱️ CONTAGEM ATIVA', style: TextStyle(fontSize: 10, color: Colors.amberAccent, fontWeight: FontWeight.bold)),
+              Text('00:29:45', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, letterSpacing: 1.5, color: Colors.white)),
+            ],
+          ),
+        );
+      case 'wheel':
+        return Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(color: const Color(0xFF04091A), borderRadius: BorderRadius.circular(10)),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: const BoxDecoration(shape: BoxShape.circle, gradient: SweepGradient(colors: [Color(0xFF1E78FF), Color(0xFF38BDF8), Color(0xFFEC4899)])),
+                child: const Icon(Icons.refresh, size: 16, color: Colors.white),
+              ),
+              const SizedBox(width: 10),
+              const Text('Roleta Giratória Ao Vivo', style: TextStyle(fontSize: 11.5, color: Color(0xFF38BDF8), fontWeight: FontWeight.bold)),
+            ],
+          ),
+        );
+      case 'podium':
+        return Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(color: const Color(0xFF04091A), borderRadius: BorderRadius.circular(10)),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              Text('🥇 @TopApoiante · 5.000 💎', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFFACC15))),
+              Text('🔥 Streak x14', style: TextStyle(fontSize: 11, color: Colors.orangeAccent, fontWeight: FontWeight.bold)),
+            ],
+          ),
+        );
+      default:
+        return Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: const Color(0xFF04091A),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFF38BDF8), width: 1.5),
+          ),
+          child: Center(
+            child: Text('✨ Pré-visualização HUD · $title', style: const TextStyle(fontSize: 11, color: Color(0xFF7DD3FC), fontWeight: FontWeight.w600)),
+          ),
+        );
+    }
   }
 
   @override
@@ -78,12 +111,8 @@ class _OverlayStudioScreenState extends State<OverlayStudioScreen> {
     final cleanRoom = (widget.roomName.isEmpty ? 'teu_canal' : widget.roomName).toLowerCase().replaceAll('@', '');
     final baseOverlayUrl = '${widget.serverUrl}/overlay/$cleanRoom';
 
-    final filteredGifts = _searchQuery.isEmpty
-        ? _all1119Gifts
-        : _all1119Gifts.where((g) => g['name'].toString().toLowerCase().contains(_searchQuery.toLowerCase())).toList();
-
     return DefaultTabController(
-      length: 3,
+      length: 2,
       child: Column(
         children: [
           const TabBar(
@@ -91,15 +120,13 @@ class _OverlayStudioScreenState extends State<OverlayStudioScreen> {
             labelColor: Color(0xFF38BDF8),
             unselectedLabelColor: Colors.white54,
             tabs: [
-              Tab(text: '🎨 Galeria Overlays'),
-              Tab(text: '🎁 1.119 Presentes'),
+              Tab(text: '🎨 Galeria com Pré-Visualização'),
               Tab(text: '✨ Marketplace PRO'),
             ],
           ),
           Expanded(
             child: TabBarView(
               children: [
-                // 1. Galeria de Overlays Estilo TikFinity
                 ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
@@ -110,7 +137,7 @@ class _OverlayStudioScreenState extends State<OverlayStudioScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text('🔗 URL Geral Browser Source (OBS / Live Studio)', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF38BDF8), fontSize: 13)),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 4),
                           SelectableText(baseOverlayUrl, style: const TextStyle(fontSize: 11.5, color: Colors.cyanAccent)),
                           const SizedBox(height: 8),
                           SizedBox(
@@ -128,7 +155,7 @@ class _OverlayStudioScreenState extends State<OverlayStudioScreen> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 12),
                     ...DefaultMediaLibrary.tikfinityOverlayCategories.map((cat) {
                       final items = List<Map<String, String>>.from(cat['items']);
                       return Column(
@@ -141,35 +168,45 @@ class _OverlayStudioScreenState extends State<OverlayStudioScreen> {
                           ...items.map((ov) {
                             final widgetUrl = '$baseOverlayUrl?widget=${ov['scene']}';
                             return Container(
-                              margin: const EdgeInsets.only(bottom: 8),
+                              margin: const EdgeInsets.only(bottom: 10),
+                              padding: const EdgeInsets.all(12),
                               decoration: _studioCardDeco(),
-                              child: ListTile(
-                                leading: const Icon(Icons.widgets_outlined, color: Color(0xFF38BDF8)),
-                                title: Text(ov['name']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
-                                subtitle: Text(ov['desc']!, style: const TextStyle(fontSize: 11.5, color: Colors.white60)),
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.copy, size: 18, color: Colors.white70),
-                                      tooltip: 'Copiar Link Individual',
-                                      onPressed: () {
-                                        Clipboard.setData(ClipboardData(text: widgetUrl));
-                                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Link "${ov['name']}" copiado!')));
-                                      },
-                                    ),
-                                    ElevatedButton(
-                                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF122B6B), padding: const EdgeInsets.symmetric(horizontal: 10)),
-                                      onPressed: () {
-                                        if (widget.roomName.isNotEmpty) {
-                                          widget.socket.emit('remote_command', {'room': cleanRoom, 'command': 'scene', 'payload': ov['scene']});
-                                        }
-                                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Overlay "${ov['name']}" ativado!')));
-                                      },
-                                      child: const Text('Usar', style: TextStyle(color: Colors.white, fontSize: 11.5)),
-                                    ),
-                                  ],
-                                ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildLiveOverlayPreview(ov['previewType'] ?? 'frame', ov['name']!),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(ov['name']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
+                                            Text(ov['desc']!, style: const TextStyle(fontSize: 11, color: Colors.white60)),
+                                          ],
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.copy, size: 18, color: Colors.white70),
+                                        onPressed: () {
+                                          Clipboard.setData(ClipboardData(text: widgetUrl));
+                                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Link "${ov['name']}" copiado!')));
+                                        },
+                                      ),
+                                      ElevatedButton(
+                                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF), padding: const EdgeInsets.symmetric(horizontal: 10)),
+                                        onPressed: () {
+                                          if (widget.roomName.isNotEmpty) {
+                                            widget.socket.emit('remote_command', {'room': cleanRoom, 'command': 'scene', 'payload': ov['scene']});
+                                          }
+                                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Overlay "${ov['name']}" ativado!')));
+                                        },
+                                        child: const Text('Ativar', style: TextStyle(color: Colors.white, fontSize: 11.5)),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
                             );
                           }),
@@ -178,89 +215,6 @@ class _OverlayStudioScreenState extends State<OverlayStudioScreen> {
                     }),
                   ],
                 ),
-                // 2. Navegador de 1.119 Presentes Gratuitos
-                Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: TextField(
-                        controller: _giftSearchCtrl,
-                        onChanged: (v) => setState(() => _searchQuery = v),
-                        decoration: InputDecoration(
-                          hintText: 'Pesquisar nos 1.119 presentes gratuitos...',
-                          prefixIcon: const Icon(Icons.search, color: Color(0xFF38BDF8)),
-                          suffixIcon: _searchQuery.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.clear),
-                                  onPressed: () {
-                                    _giftSearchCtrl.clear();
-                                    setState(() => _searchQuery = '');
-                                  },
-                                )
-                              : null,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                          isDense: true,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: GridView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          crossAxisSpacing: 8,
-                          mainAxisSpacing: 8,
-                          childAspectRatio: 0.76,
-                        ),
-                        itemCount: filteredGifts.length,
-                        itemBuilder: (ctx, idx) {
-                          final item = filteredGifts[idx];
-                          return Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: _studioCardDeco(),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Image.network(item['gif'], width: 52, height: 52, fit: BoxFit.cover),
-                                ),
-                                Text(
-                                  item['name'],
-                                  textAlign: TextAlign.center,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                                ),
-                                Text('${item['coins']} moedas', style: const TextStyle(fontSize: 10, color: Color(0xFF38BDF8))),
-                                SizedBox(
-                                  width: double.infinity,
-                                  height: 26,
-                                  child: ElevatedButton(
-                                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF), padding: EdgeInsets.zero),
-                                    onPressed: () {
-                                      DefaultMediaLibrary.tiktokGiftsCatalog.insert(0, {
-                                        'id': item['id'],
-                                        'name': item['name'],
-                                        'coins': item['coins'],
-                                        'enabled': true,
-                                        'gif': item['gif'],
-                                        'sound': 'https://google.com',
-                                      });
-                                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('✅ "${item['name']}" adicionado às tuas Ações!')));
-                                    },
-                                    child: const Text('Baixar Grátis', style: TextStyle(color: Colors.white, fontSize: 10)),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                // 3. Marketplace & Criador PRO
                 ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
@@ -273,17 +227,13 @@ class _OverlayStudioScreenState extends State<OverlayStudioScreen> {
                           const SizedBox(height: 8),
                           Text(_isProMember ? 'Conta Criador PRO Ativa' : 'Estúdio Criador & Loja PRO', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                           const SizedBox(height: 6),
-                          const Text(
-                            'Cria e vende os teus próprios Overlays, Roletas e Packs de Sons no Marketplace da Comunidade HELL Live.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 12.5, color: Colors.white70),
-                          ),
+                          const Text('Publica e vende os teus próprios Overlays e Packs no Marketplace HELL Live.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12.5, color: Colors.white70)),
                           const SizedBox(height: 12),
                           if (!_isProMember)
                             ElevatedButton(
                               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF59E0B)),
-                              onPressed: _openProDialog,
-                              child: const Text('Desbloquear Plano PRO', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                              onPressed: () => setState(() => _isProMember = true),
+                              child: const Text('Ativar Plano PRO (4.99 €/mês)', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
                             ),
                         ],
                       ),
@@ -298,6 +248,8 @@ class _OverlayStudioScreenState extends State<OverlayStudioScreen> {
     );
   }
 }
+
+
 class InteractionScreen extends StatefulWidget {
   final IO.Socket socket;
   final String roomName;
