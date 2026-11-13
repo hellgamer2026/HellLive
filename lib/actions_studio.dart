@@ -268,14 +268,15 @@ class _ActionsStudioTabState extends State<ActionsStudioTab> {
   }
 
   // 4. Janela Completa de Personalização (Seleção Única de Som Real + Trocar Imagem + Voz Própria)
-  void _openRichCustomizer({
+    void _openRichCustomizer({
     required String title,
     required String initialMedia,
     required String initialSound,
     String? initialCustomVoice,
     bool initialTtsThank = true,
-    bool showTtsOption = false,
-    required Function(String media, String sound, String? voicePath, bool ttsThank) onSave,
+    String? initialCustomMessage,
+    required String defaultMessageTemplate,
+    required Function(String media, String sound, String? voicePath, bool ttsThank, String customMessage) onSave,
   }) {
     String chosenMedia = initialMedia;
     String chosenSound = initialSound;
@@ -283,6 +284,9 @@ class _ActionsStudioTabState extends State<ActionsStudioTab> {
     bool ttsThank = initialTtsThank;
     bool isRecording = false;
     String mediaFilter = '';
+    final msgCtrl = TextEditingController(
+      text: (initialCustomMessage == null || initialCustomMessage.trim().isEmpty) ? defaultMessageTemplate : initialCustomMessage,
+    );
 
     showModalBottomSheet(
       context: context,
@@ -296,10 +300,13 @@ class _ActionsStudioTabState extends State<ActionsStudioTab> {
             ...DefaultMediaLibrary.builtInGifsAndPngs,
           ].where((m) => mediaFilter.isEmpty || m['name']!.toLowerCase().contains(mediaFilter.toLowerCase())).toList();
 
+          final sampleUser = 'Hélder';
+          final renderedPreviewText = msgCtrl.text.replaceAll('{user}', sampleUser).replaceAll('{nome}', sampleUser);
+
           return Padding(
             padding: EdgeInsets.only(left: 16, right: 16, top: 16, bottom: MediaQuery.of(ctx).viewInsets.bottom + 16),
             child: SizedBox(
-              height: 560,
+              height: 580,
               child: ListView(
                 children: [
                   Row(
@@ -309,12 +316,18 @@ class _ActionsStudioTabState extends State<ActionsStudioTab> {
                       Expanded(child: Text('Personalizar · $title', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8)))),
                       ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
-                        onPressed: () => _openOfflinePreview(
-                          title: title,
-                          mediaUrl: chosenMedia,
-                          soundUrl: chosenSound,
-                          customVoicePath: customVoicePath,
-                        ),
+                        onPressed: () {
+                          _openOfflinePreview(
+                            title: title,
+                            mediaUrl: chosenMedia,
+                            soundUrl: chosenSound,
+                            customVoicePath: customVoicePath,
+                            message: renderedPreviewText,
+                          );
+                          if (customVoicePath == null && ttsThank && renderedPreviewText.trim().isNotEmpty) {
+                            widget.onSpeakVoice(renderedPreviewText);
+                          }
+                        },
                         icon: const Icon(Icons.visibility, size: 16, color: Colors.black),
                         label: const Text('Pré-Visualizar', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 11.5)),
                       ),
@@ -329,7 +342,7 @@ class _ActionsStudioTabState extends State<ActionsStudioTab> {
                   ),
                   const SizedBox(height: 8),
                   SizedBox(
-                    height: 76,
+                    height: 74,
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
                       itemCount: allMedia.length,
@@ -345,61 +358,112 @@ class _ActionsStudioTabState extends State<ActionsStudioTab> {
                               border: Border.all(color: sel ? Colors.cyanAccent : Colors.white12, width: 2),
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: Image.network(item['url']!, width: 58, height: 58, fit: BoxFit.contain),
+                            child: Image.network(item['url']!, width: 56, height: 56, fit: BoxFit.contain),
                           ),
                         );
                       },
                     ),
                   ),
                   const SizedBox(height: 12),
-                  const Text('2. Gravar Voz Própria ou TTS:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF38BDF8))),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(backgroundColor: isRecording ? Colors.redAccent : const Color(0xFF122B6B)),
-                        onPressed: () async {
-                          if (!isRecording) {
-                            if (await widget.voiceRecorder.hasPermission()) {
-                              final path = '${Directory.systemTemp.path}/act_voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
-                              await widget.voiceRecorder.start(const RecordConfig(), path: path);
-                              setModalState(() => isRecording = true);
-                            }
-                          } else {
-                            final recorded = await widget.voiceRecorder.stop();
-                            setModalState(() {
-                              isRecording = false;
-                              if (recorded != null) {
-                                customVoicePath = recorded;
-                                chosenSound = '';
-                              }
-                            });
-                          }
-                        },
-                        icon: Icon(isRecording ? Icons.stop : Icons.mic, color: Colors.white, size: 18),
-                        label: Text(isRecording ? 'Parar Gravação' : 'Gravar Minha Voz', style: const TextStyle(color: Colors.white, fontSize: 12)),
-                      ),
-                      if (customVoicePath != null) ...[
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: const Icon(Icons.play_circle_fill, color: Colors.greenAccent, size: 28),
-                          onPressed: () => _playAudioSafe('', filePath: customVoicePath),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: _neonCard(),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('2. Mensagem Falada de Agradecimento', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF38BDF8))),
+                            Switch(
+                              activeColor: Colors.white,
+                              activeTrackColor: const Color(0xFF1E78FF),
+                              value: ttsThank,
+                              onChanged: (v) => setModalState(() => ttsThank = v),
+                            ),
+                          ],
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                          onPressed: () => setModalState(() => customVoicePath = null),
+                        if (ttsThank) ...[
+                          TextField(
+                            controller: msgCtrl,
+                            onChanged: (_) => setModalState(() {}),
+                            decoration: const InputDecoration(
+                              labelText: 'Texto que será lido na live (usa {user} para o nome)',
+                              isDense: true,
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Wrap(
+                            spacing: 6,
+                            children: [
+                              ActionChip(
+                                label: const Text('+ Inserir {user}', style: TextStyle(fontSize: 11)),
+                                onPressed: () {
+                                  msgCtrl.text = '${msgCtrl.text} {user}';
+                                  setModalState(() {});
+                                },
+                              ),
+                              ActionChip(
+                                label: const Text('Redefinir Padrão', style: TextStyle(fontSize: 11)),
+                                onPressed: () {
+                                  msgCtrl.text = defaultMessageTemplate;
+                                  setModalState(() {});
+                                },
+                              ),
+                              ActionChip(
+                                label: const Text('🔊 Ouvir Exemplo (Hélder)', style: TextStyle(fontSize: 11)),
+                                onPressed: () => widget.onSpeakVoice(renderedPreviewText),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text('Exemplo lido na live: "$renderedPreviewText"', style: const TextStyle(fontSize: 11, color: Colors.greenAccent)),
+                        ],
+                        const Divider(color: Colors.white12),
+                        const Text('Ou Gravar a Tua Própria Voz (Substitui o TTS):', style: TextStyle(fontSize: 11.5, color: Colors.white70)),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(backgroundColor: isRecording ? Colors.redAccent : const Color(0xFF122B6B)),
+                              onPressed: () async {
+                                if (!isRecording) {
+                                  if (await widget.voiceRecorder.hasPermission()) {
+                                    final path = '${Directory.systemTemp.path}/act_voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+                                    await widget.voiceRecorder.start(const RecordConfig(), path: path);
+                                    setModalState(() => isRecording = true);
+                                  }
+                                } else {
+                                  final recorded = await widget.voiceRecorder.stop();
+                                  setModalState(() {
+                                    isRecording = false;
+                                    if (recorded != null) {
+                                      customVoicePath = recorded;
+                                      chosenSound = '';
+                                    }
+                                  });
+                                }
+                              },
+                              icon: Icon(isRecording ? Icons.stop : Icons.mic, color: Colors.white, size: 18),
+                              label: Text(isRecording ? 'Parar Gravação' : 'Gravar Minha Voz', style: const TextStyle(color: Colors.white, fontSize: 12)),
+                            ),
+                            if (customVoicePath != null) ...[
+                              const SizedBox(width: 8),
+                              IconButton(
+                                icon: const Icon(Icons.play_circle_fill, color: Colors.greenAccent, size: 28),
+                                onPressed: () => _playAudioSafe('', filePath: customVoicePath),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                                onPressed: () => setModalState(() => customVoicePath = null),
+                              ),
+                            ],
+                          ],
                         ),
                       ],
-                    ],
-                  ),
-                  if (showTtsOption)
-                    SwitchListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Agradecimento Falado Automático (TTS)', style: TextStyle(fontSize: 12.5)),
-                      value: ttsThank,
-                      onChanged: (v) => setModalState(() => ttsThank = v),
                     ),
+                  ),
                   const SizedBox(height: 10),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -429,8 +493,7 @@ class _ActionsStudioTabState extends State<ActionsStudioTab> {
                       });
                     },
                   ),
-                  ...widget.sounds.asMap().entries.map((entry) {
-                    final s = entry.value;
+                  ...widget.sounds.map((s) {
                     final url = s['url']!;
                     final isSelected = chosenSound == url && customVoicePath == null;
                     return ListTile(
@@ -455,7 +518,7 @@ class _ActionsStudioTabState extends State<ActionsStudioTab> {
                     style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF), padding: const EdgeInsets.symmetric(vertical: 13)),
                     onPressed: () {
                       widget.sfxPlayer.stop();
-                      onSave(chosenMedia, chosenSound, customVoicePath, ttsThank);
+                      onSave(chosenMedia, chosenSound, customVoicePath, ttsThank, msgCtrl.text.trim());
                       Navigator.pop(ctx);
                     },
                     child: const Text('Guardar Alterações', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
