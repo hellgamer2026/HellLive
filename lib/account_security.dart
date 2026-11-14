@@ -1075,7 +1075,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
     );
   }
 }
-
+}
 class ProfilePrivacySecurityScreen extends StatefulWidget {
   final Map<String, dynamic> user;
   final Function(Map<String, dynamic>) onUserUpdated;
