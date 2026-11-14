@@ -576,6 +576,24 @@ class _MusicBackgroundScreenState extends State<MusicBackgroundScreen> {
         ...tracks.asMap().entries.map((e) {
           final isCurrent = (MusicDeckController.currentIndex % tracks.length) == e.key && MusicDeckController.isPlaying;
           return Card(
+            color: isCurrent ? const Color(0xFF122E73) : const Color(0xFF0B1636),
+            child: ListTile(
+              dense: true,
+              leading: Icon(isCurrent ? Icons.equalizer : Icons.library_music, color: isCurrent ? Colors.greenAccent : const Color(0xFF38BDF8)),
+              title: Text(e.value['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              subtitle: Text(e.value['artist'] ?? '', style: const TextStyle(fontSize: 11, color: Colors.white60)),
+              trailing: IconButton(
+                icon: Icon(isCurrent ? Icons.pause : Icons.play_arrow, color: Colors.greenAccent),
+                onPressed: () => _playIndex(e.key),
+              ),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+}
+
 class CommunitySocialScreen extends StatefulWidget {
   final String serverUrl;
   final Map<String, dynamic> currentUser;
@@ -765,4 +783,99 @@ class _AboutAndSupportScreenState extends State<AboutAndSupportScreen> {
         const SizedBox(height: 16),
         Container(
           padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [Color(0xFF0E1D47), Color(0xFF08112B)]),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFF1E78FF)),
+          ),
+          child: const Text(
+            'O HELL Live foi criado para dar a todos os criadores — do telemóvel ao estúdio completo no PC — ferramentas profissionais de transmissão, alertas em tempo real, Stream Deck em vidro 3D e um Market Place justo.',
+            style: TextStyle(fontSize: 13.5, height: 1.5, color: Colors.white70),
+          ),
+        ),
+        const SizedBox(height: 16),
+        const Text('📚 Tópicos Rápidos & Exemplos Práticos', style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8))),
+        const SizedBox(height: 8),
+        ..._faqTopics.map((f) => Card(
+              color: const Color(0xFF0B1636),
+              child: ExpansionTile(
+                title: Text(f['title']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                    child: Text(f['example']!, style: const TextStyle(fontSize: 12.5, color: Colors.white70, height: 1.45)),
+                  ),
+                ],
+              ),
+            )),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
+            color: const Color(0xFF0B1636),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFF38BDF8)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.smart_toy, color: Color(0xFF38BDF8)),
+                  SizedBox(width: 8),
+                  Text('Assistente IA · Dúvidas & Suporte', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5, color: Color(0xFF38BDF8))),
+                ],
+              ),
+              const SizedBox(height: 10),
+              ..._aiChat.map((m) => Container(
+                    margin: const EdgeInsets.only(bottom: 6),
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: m['role'] == 'ai' ? const Color(0xFF122E73) : const Color(0xFF1E78FF).withOpacity(0.25),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(m['text']!, style: const TextStyle(fontSize: 12.5)),
+                  )),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _aiInputCtrl,
+                      decoration: const InputDecoration(hintText: 'Escreve a tua dúvida aqui...', isDense: true, border: OutlineInputBorder()),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  IconButton(
+                    icon: const Icon(Icons.send, color: Color(0xFF38BDF8)),
+                    onPressed: () {
+                      final q = _aiInputCtrl.text.trim();
+                      if (q.isEmpty) return;
+                      setState(() {
+                        _aiChat.add({'role': 'user', 'text': q});
+                        _aiChat.add({'role': 'ai', 'text': _generateSmartAiReply(q)});
+                        _aiInputCtrl.clear();
+                      });
+                    },
+                  ),
+                ],
+              ),
+              const Divider(color: Colors.white12, height: 22),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.email_outlined, color: Color(0xFF38BDF8)),
+                title: const Text('Contacto Oficial da Marca', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
+                subtitle: const Text('hellgamer2026@gmail.com', style: TextStyle(color: Colors.cyanAccent)),
+                trailing: IconButton(
+                  icon: const Icon(Icons.open_in_new, size: 18),
+                  onPressed: () => launchUrl(Uri.parse('mailto:hellgamer2026@gmail.com')),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
