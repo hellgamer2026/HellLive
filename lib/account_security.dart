@@ -928,6 +928,51 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                               );
                             },
                           ),
+                          const SizedBox(height: 10),
+                          TextField(
+                            controller: _passCtrl,
+                            obscureText: _obscurePass,
+                            decoration: InputDecoration(
+                              labelText: 'Palavra-passe',
+                              prefixIcon: const Icon(Icons.lock_outline),
+                              isDense: true,
+                              suffixIcon: IconButton(
+                                icon: Icon(_obscurePass ? Icons.visibility_outlined : Icons.visibility_off_outlined, color: const Color(0xFF38BDF8)),
+                                onPressed: () => setState(() => _obscurePass = !_obscurePass),
+                              ),
+                            ),
+                          ),
+                          CheckboxListTile(
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                            activeColor: const Color(0xFF1E78FF),
+                            title: const Text('Guardar utilizador e palavra-passe para acesso rápido', style: TextStyle(fontSize: 11.5)),
+                            value: _rememberPassword,
+                            onChanged: (v) => setState(() => _rememberPassword = v ?? true),
+                          ),
+                        ],
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF), padding: const EdgeInsets.symmetric(vertical: 13)),
+                            onPressed: _submitForm,
+                            child: Text(_isRegisterMode ? 'Concluir Registo Manual' : 'Entrar Agora', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class AppLockScreen extends StatefulWidget {
   final Map<String, dynamic> user;
   final VoidCallback onUnlocked;
