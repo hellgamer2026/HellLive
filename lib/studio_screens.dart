@@ -219,6 +219,43 @@ class _OverlayStudioScreenState extends State<OverlayStudioScreen> {
                         children: [
                           Expanded(
                             child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(ov['name']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
+                                Text(ov['desc']!, style: const TextStyle(fontSize: 11, color: Colors.white60)),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.copy, size: 18, color: Colors.white70),
+                            tooltip: 'Copiar Link deste Overlay',
+                            onPressed: () {
+                              Clipboard.setData(ClipboardData(text: widgetUrl));
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Link "${ov['name']}" copiado!')));
+                            },
+                          ),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF), padding: const EdgeInsets.symmetric(horizontal: 12)),
+                            onPressed: () {
+                              LocalObsServer.pushAlert('HELL Live', 'Overlay "${ov['name']}" Ativo!', DefaultMediaLibrary.builtInGifsAndPngs.first['url']!);
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Overlay "${ov['name']}" ativado na transmissão!')));
+                            },
+                            child: const Text('Ativar', style: TextStyle(color: Colors.white, fontSize: 11.5)),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ],
+          );
+        }),
+      ],
+    );
+  }
+}
+
 class InteractionScreen extends StatefulWidget {
   final IO.Socket socket;
   final String roomName;
