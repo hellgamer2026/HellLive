@@ -756,7 +756,6 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
     await UserAccountManager.saveUser(existing);
     widget.onAuthenticated(existing);
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -874,6 +873,61 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                                 child: ChoiceChip(
                                   label: const Center(child: Text('Telemóvel (SMS)', style: TextStyle(fontSize: 12))),
                                   selected: _loginMethod == 'phone',
+                                  selectedColor: const Color(0xFF1E78FF),
+                                  onSelected: (_) => setState(() => _loginMethod = 'phone'),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+                        if (_isRegisterMode) ...[
+                          const Text('Registo Manual:', style: TextStyle(fontSize: 12, color: Color(0xFF38BDF8), fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 8),
+                          TextField(controller: _nickCtrl, decoration: const InputDecoration(labelText: 'Nome de Utilizador', prefixIcon: Icon(Icons.person_outline), isDense: true)),
+                          const SizedBox(height: 10),
+                          TextField(controller: _phoneCtrl, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Telemóvel para Alertas SMS (Opcional)', prefixIcon: Icon(Icons.phone_android), isDense: true)),
+                          const SizedBox(height: 10),
+                        ],
+                        if (!_isRegisterMode && _loginMethod == 'phone')
+                          TextField(
+                            controller: _phoneCtrl,
+                            keyboardType: TextInputType.phone,
+                            decoration: const InputDecoration(
+                              labelText: 'Número de Telemóvel (Recebe Código SMS)',
+                              prefixIcon: Icon(Icons.phone_android),
+                              isDense: true,
+                            ),
+                          )
+                        else ...[
+                          Autocomplete<Map<String, String>>(
+                            initialValue: TextEditingValue(text: _identifierCtrl.text),
+                            optionsBuilder: (TextEditingValue textValue) {
+                              if (textValue.text.isEmpty) return _savedAccounts;
+                              final q = textValue.text.toLowerCase();
+                              return _savedAccounts.where((acc) =>
+                                  (acc['email'] ?? '').toLowerCase().contains(q) || (acc['username'] ?? '').toLowerCase().contains(q));
+                            },
+                            displayStringForOption: (opt) => opt['email'] ?? opt['username'] ?? '',
+                            onSelected: (selection) {
+                              setState(() {
+                                _identifierCtrl.text = selection['email'] ?? selection['username'] ?? '';
+                                _passCtrl.text = selection['password'] ?? '';
+                              });
+                            },
+                            fieldViewBuilder: (ctx, fieldCtrl, focusNode, onSubmit) {
+                              fieldCtrl.addListener(() => _identifierCtrl.text = fieldCtrl.text);
+                              return TextField(
+                                controller: fieldCtrl,
+                                focusNode: focusNode,
+                                decoration: const InputDecoration(
+                                  labelText: 'Email ou Nome de Utilizador',
+                                  prefixIcon: Icon(Icons.alternate_email),
+                                  isDense: true,
+                                ),
+                              );
+                            },
+                          ),
 class AppLockScreen extends StatefulWidget {
   final Map<String, dynamic> user;
   final VoidCallback onUnlocked;
@@ -1075,7 +1129,6 @@ class _AppLockScreenState extends State<AppLockScreen> {
     );
   }
 }
-}
 class ProfilePrivacySecurityScreen extends StatefulWidget {
   final Map<String, dynamic> user;
   final Function(Map<String, dynamic>) onUserUpdated;
@@ -1104,3 +1157,197 @@ class _ProfilePrivacySecurityScreenState extends State<ProfilePrivacySecurityScr
   late List<String> _securityMethods;
   late String _pinSecret;
   late String _passwordSecret;
+  late String _patternSecret;
+
+  @override
+  void initState() {
+    super.initState();
+    _nickCtrl = TextEditingController(text: widget.user['nickname'] ?? '');
+    _bioCtrl = TextEditingController(text: widget.user['bio'] ?? '');
+    _phoneCtrl = TextEditingController(text: widget.user['phone'] ?? '');
+    _addressCtrl = TextEditingController(text: widget.user['address'] ?? '');
+    _discordCtrl = TextEditingController(text: widget.user['discord'] ?? '');
+    _whatsappCtrl = TextEditingController(text: widget.user['whatsapp'] ?? '');
+    _status = widget.user['status'] ?? 'online';
+    _publicEmail = widget.user['publicEmail'] ?? false;
+    _publicPhone = widget.user['publicPhone'] ?? false;
+    _publicAddress = widget.user['publicAddress'] ?? false;
+    _publicStats = widget.user['publicStats'] ?? true;
+    _securityMethods = List<String>.from(widget.user['securityMethods'] ?? []);
+    _pinSecret = widget.user['pinSecret'] ?? '';
+    _passwordSecret = widget.user['passwordSecret'] ?? '';
+    _patternSecret = widget.user['patternSecret'] ?? '';
+  }
+
+  Future<void> _saveProfile() async {
+    final updated = Map<String, dynamic>.from(widget.user);
+    updated['nickname'] = _nickCtrl.text.trim();
+    updated['bio'] = _bioCtrl.text.trim();
+    updated['phone'] = _phoneCtrl.text.trim();
+    updated['address'] = _addressCtrl.text.trim();
+    updated['discord'] = _discordCtrl.text.trim();
+    updated['whatsapp'] = _whatsappCtrl.text.trim();
+    updated['status'] = _status;
+    updated['publicEmail'] = _publicEmail;
+    updated['publicPhone'] = _publicPhone;
+    updated['publicAddress'] = _publicAddress;
+    updated['publicStats'] = _publicStats;
+    updated['securityMethods'] = _securityMethods;
+    updated['pinSecret'] = _pinSecret;
+    updated['passwordSecret'] = _passwordSecret;
+    updated['patternSecret'] = _patternSecret;
+    await UserAccountManager.saveUser(updated);
+    widget.onUserUpdated(updated);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✅ Perfil, privacidade e segurança atualizados!')));
+    }
+  }
+
+  Future<void> _toggleSecurityMethod(String method, bool enable) async {
+    if (!enable) {
+      setState(() => _securityMethods.remove(method));
+      await _saveProfile();
+      return;
+    }
+
+    if (method == 'biometric') {
+      try {
+        final canCheck = await _localAuth.canCheckBiometrics;
+        final supported = await _localAuth.isDeviceSupported();
+        if (!canCheck || !supported) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Este aparelho não tem sensor biométrico ou Face ID ativo.')),
+            );
+          }
+          return;
+        }
+        final ok = await _localAuth.authenticate(
+          localizedReason: 'Confirma a tua biometria para ativar no HELL Live',
+          options: const AuthenticationOptions(biometricOnly: false),
+        );
+        if (ok) {
+          setState(() {
+            if (!_securityMethods.contains('biometric')) _securityMethods.add('biometric');
+          });
+          await _saveProfile();
+        }
+      } catch (_) {}
+      return;
+    }
+
+    final ctrl = TextEditingController();
+    final labels = {'pin': 'Novo PIN Numérico', 'password': 'Nova Senha Forte', 'pattern': 'Padrão (ex: 1-2-3-6-9)'};
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF0B1636),
+        title: Text('Configurar ${labels[method]}'),
+        content: TextField(
+          controller: ctrl,
+          obscureText: true,
+          keyboardType: method == 'pin' ? TextInputType.number : TextInputType.text,
+          decoration: InputDecoration(labelText: labels[method]),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF)),
+            onPressed: () async {
+              if (ctrl.text.trim().isNotEmpty) {
+                setState(() {
+                  if (method == 'pin') _pinSecret = ctrl.text.trim();
+                  if (method == 'password') _passwordSecret = ctrl.text.trim();
+                  if (method == 'pattern') _patternSecret = ctrl.text.trim();
+                  if (!_securityMethods.contains(method)) _securityMethods.add(method);
+                });
+                Navigator.pop(ctx);
+                await _saveProfile();
+              }
+            },
+            child: const Text('Ativar', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final statusCol = UserAccountManager.statusColor(_status);
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [Color(0xFF0E1D47), Color(0xFF08112B)]),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFF1E429F)),
+          ),
+          child: Column(
+            children: [
+              GestureDetector(
+                onTap: () async {
+                  final res = await FilePicker.platform.pickFiles(type: FileType.image);
+                  if (res != null && res.files.single.path != null) {
+                    final updated = Map<String, dynamic>.from(widget.user);
+                    updated['avatarPath'] = res.files.single.path!;
+                    await UserAccountManager.saveUser(updated);
+                    widget.onUserUpdated(updated);
+                  }
+                },
+                child: Stack(
+                  alignment: Alignment.bottomRight,
+                  children: [
+                    UserAccountManager.buildUserAvatar(widget.user, radius: 42),
+                    Container(
+                      width: 18,
+                      height: 18,
+                      decoration: BoxDecoration(color: statusCol, shape: BoxShape.circle, border: Border.all(color: const Color(0xFF050B1E), width: 2.5)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text('${widget.user['firstName'] ?? ''} ${widget.user['lastName'] ?? ''}'.trim(), style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+              Text(widget.user['email'] ?? '', style: const TextStyle(fontSize: 12, color: Colors.white60)),
+              const SizedBox(height: 10),
+              DropdownButtonFormField<String>(
+                value: _status,
+                dropdownColor: const Color(0xFF0B1636),
+                decoration: const InputDecoration(labelText: 'Estado Atual na Comunidade', isDense: true),
+                items: const [
+                  DropdownMenuItem(value: 'online', child: Text('🟢 Online')),
+                  DropdownMenuItem(value: 'dnd', child: Text('🟠 Não Incomodar')),
+                  DropdownMenuItem(value: 'invisible', child: Text('⚪ Invisível (Furtivo)')),
+                  DropdownMenuItem(value: 'offline', child: Text('🔴 Offline')),
+                ],
+                onChanged: (v) {
+                  if (v != null) {
+                    setState(() => _status = v);
+                    _saveProfile();
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(color: const Color(0xFF0B1636), borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFF1E429F))),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('👤 Dados do Perfil (Opcionais e Editáveis)', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF38BDF8))),
+              const SizedBox(height: 8),
+              TextField(controller: _nickCtrl, decoration: const InputDecoration(labelText: 'Nome de Criador / Nickname', isDense: true)),
+              const SizedBox(height: 8),
+              TextField(controller: _bioCtrl, decoration: const InputDecoration(labelText: 'Bio / Descrição', isDense: true)),
+              const SizedBox(height: 8),
+              TextField(controller: _phoneCtrl, decoration: const InputDecoration(labelText: 'Telemóvel', isDense: true)),
+              const SizedBox(height: 8),
+              TextField(controller: _addressCtrl, decoration: const InputDecoration(labelText: 'Morada / Cidade', isDense: true)),
+              const SizedBox(height: 8),
