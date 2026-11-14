@@ -851,3 +851,22 @@ class _MainShellState extends State<MainShell> {
                         child: Icon(_isMuted ? Icons.volume_off : Icons.volume_up, color: Colors.white, size: 20),
                       ),
                     ),
+                  ),
+                ],
+              ),
+              body: screens[_selectedIndex],
+              bottomNavigationBar: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  border: Border(top: BorderSide(color: Colors.white.withOpacity(0.08))),
+                ),
+                child: const Text(
+                  'A tua live, no teu comando.  ·  LIVE  ·  PLAY  ·  CONNECT',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 11, letterSpacing: 1.5, color: Color(0xFF7DD3FC), fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+    );
+  }
+}
