@@ -929,7 +929,7 @@ Widget _buildSelectedGoalOverlayGraphic(String overlayType, double pct, String t
                       onPressed: () async {
                         final next = (simulatedPct + 0.15).clamp(0.0, 1.0);
                         setSimState(() => simulatedPct = next);
-                        await _togglePlayAudio('https://google.com');
+                        await _togglePlayAudio('https://wikimedia.org');
                       },
                       child: const Text('+15% Ação', style: TextStyle(color: Colors.white, fontSize: 12)),
                     ),
@@ -937,7 +937,7 @@ Widget _buildSelectedGoalOverlayGraphic(String overlayType, double pct, String t
                       style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
                                             onPressed: () async {
                         setSimState(() => simulatedPct = 1.0);
-                        await _togglePlayAudio('https://google.com');
+                        await _togglePlayAudio('https://wikimedia.org');
                       },
                       child: const Text('Simular 100% Concluído', style: TextStyle(color: Colors.white, fontSize: 12)),
                     ),
