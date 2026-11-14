@@ -626,6 +626,14 @@ class _MainShellState extends State<MainShell> {
         _menuTile(Icons.storefront_outlined, AppTranslations.t(_appLang, 'marketplace'), () => setState(() => _selectedIndex = 7), badge: 'LOJA'),
         _menuTile(Icons.workspace_premium_outlined, AppTranslations.t(_appLang, 'creator_pro'), () => setState(() => _selectedIndex = 8), badge: 'PRO'),
         _menuTile(Icons.grid_view_rounded, AppTranslations.t(_appLang, 'stream_deck'), () => setState(() => _selectedIndex = 9), badge: 'VIDRO 3D'),
+        _menuTile(Icons.public, AppTranslations.t(_appLang, 'community'), () => setState(() => _selectedIndex = 10), badge: 'GLOBO NASA'),
+        _menuTile(Icons.person_outline, AppTranslations.t(_appLang, 'profile'), () => setState(() => _selectedIndex = 11), badge: 'BANNERS'),
+        _menuTile(Icons.support_agent_outlined, AppTranslations.t(_appLang, 'about'), () => setState(() => _selectedIndex = 12), badge: 'AJUDA & IA'),
+        _menuTile(Icons.settings_outlined, AppTranslations.t(_appLang, 'settings'), () => setState(() => _selectedIndex = 13)),
+      ],
+    );
+  }
+
   Widget _buildSettingsTab() {
     return ListView(
       padding: const EdgeInsets.all(16),
