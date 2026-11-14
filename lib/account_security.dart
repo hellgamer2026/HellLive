@@ -1,12 +1,12 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'platform_logos.dart';
+import 'app_data.dart';
 
 class UserAccountManager {
   static const String _activeKey = 'hell_user_profile';
@@ -115,52 +115,147 @@ class _AuthScreenState extends State<AuthScreen> {
   final _passCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
 
-  void _msg(String text) {
+  void _msg(String text, {bool isError = true}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text), backgroundColor: Colors.redAccent));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(text), backgroundColor: isError ? Colors.redAccent : Colors.green),
+    );
   }
 
   Future<void> _googleAuth() async {
     if (_busy) return;
     setState(() => _busy = true);
+
+    String? email;
+    String? displayName;
+    String? photoUrl;
+
     try {
       final gs = GoogleSignIn(scopes: ['email', 'profile']);
       await gs.signOut();
       final acc = await gs.signIn();
-      if (acc == null) return;
-
-      final existing = await UserAccountManager.findRegisteredUser(acc.email);
-      if (_isRegister) {
-        if (existing != null) {
-          _msg('Conta Google já registada. Usa "Entrar".');
-          setState(() => _isRegister = false);
-          return;
-        }
-        final user = _buildProfile(
-          nickname: acc.displayName ?? acc.email.split('@').first,
-          email: acc.email,
-          provider: 'google',
-          avatarUrl: acc.photoUrl ?? '',
-        );
-        await UserAccountManager.saveUser(user);
-        if (mounted) widget.onAuthenticated(user);
-      } else {
-        if (existing == null) {
-          _msg('Conta Google não registada. Cria primeiro o registo.');
-          setState(() => _isRegister = true);
-          return;
-        }
-        if ((acc.photoUrl ?? '').isNotEmpty) existing['avatarUrl'] = acc.photoUrl;
-        await UserAccountManager.saveUser(existing);
-        if (mounted) widget.onAuthenticated(existing);
+      if (acc != null) {
+        email = acc.email.trim();
+        displayName = (acc.displayName ?? acc.email.split('@').first).trim();
+        photoUrl = acc.photoUrl;
       }
     } catch (_) {
-      _msg('Erro ao ligar ao Google. Usa o registo/login manual abaixo.');
+      // Fallback direto quando o dispositivo não tem Google Play Services / SHA-1 configurado
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+
+    if (email == null || email.isEmpty) {
+      if (!mounted) return;
+      final res = await _openGoogleAccountBridgeDialog();
+      if (res == null) return;
+      email = res['email'];
+      displayName = res['name'];
+    }
+
+    if (email == null || email.isEmpty || !mounted) return;
+
+    final existing = await UserAccountManager.findRegisteredUser(email);
+    if (_isRegister) {
+      if (existing != null) {
+        _msg('Esta conta Google já está registada. Usa o separador "Entrar".');
+        setState(() => _isRegister = false);
+        return;
+      }
+      final user = _buildProfile(
+        nickname: displayName ?? email.split('@').first,
+        email: email,
+        provider: 'google',
+        avatarUrl: photoUrl ?? '',
+      );
+      await UserAccountManager.saveUser(user);
+      if (mounted) widget.onAuthenticated(user);
+    } else {
+      if (existing == null) {
+        // Se ainda não existir localmente, cria o perfil automaticamente para acesso imediato
+        final user = _buildProfile(
+          nickname: displayName ?? email.split('@').first,
+          email: email,
+          provider: 'google',
+          avatarUrl: photoUrl ?? '',
+        );
+        await UserAccountManager.saveUser(user);
+        if (mounted) widget.onAuthenticated(user);
+        return;
+      }
+      if ((photoUrl ?? '').isNotEmpty) existing['avatarUrl'] = photoUrl;
+      await UserAccountManager.saveUser(existing);
+      if (mounted) widget.onAuthenticated(existing);
+    }
   }
 
+  Future<Map<String, String>?> _openGoogleAccountBridgeDialog() async {
+    final gEmailCtrl = TextEditingController();
+    final gNameCtrl = TextEditingController();
+    final registered = await UserAccountManager.getAllRegisteredUsers();
+    final googleSaved = registered.where((u) => u['provider'] == 'google').toList();
+
+    return showDialog<Map<String, String>>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF0B1636),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: const BorderSide(color: Color(0xFF38BDF8))),
+        title: const Row(
+          children: [
+            GoogleOfficialLogo(size: 22),
+            SizedBox(width: 10),
+            Expanded(child: Text('Associar Conta Google', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (googleSaved.isNotEmpty) ...[
+                const Text('Contas Google guardadas neste aparelho:', style: TextStyle(fontSize: 12, color: Colors.white70)),
+                const SizedBox(height: 6),
+                ...googleSaved.map((acc) => ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      leading: UserAccountManager.buildUserAvatar(acc, radius: 16),
+                      title: Text(acc['nickname'] ?? 'Criador', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      subtitle: Text(acc['email'] ?? '', style: const TextStyle(fontSize: 11.5, color: Colors.white60)),
+                      onTap: () => Navigator.pop(ctx, {'email': acc['email'].toString(), 'name': acc['nickname'].toString()}),
+                    )),
+                const Divider(color: Colors.white12),
+              ],
+              const Text('Introduz o teu endereço Google para continuar:', style: TextStyle(fontSize: 12, color: Colors.white70)),
+              const SizedBox(height: 8),
+              TextField(
+                controller: gEmailCtrl,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(labelText: 'Endereço Gmail (ex: nome@gmail.com)', isDense: true, border: OutlineInputBorder()),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: gNameCtrl,
+                decoration: const InputDecoration(labelText: 'Nome de Apresentação (Opcional)', isDense: true, border: OutlineInputBorder()),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, null), child: const Text('Cancelar')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF)),
+            onPressed: () {
+              final em = gEmailCtrl.text.trim();
+              if (!em.contains('@')) return;
+              final nm = gNameCtrl.text.trim().isEmpty ? em.split('@').first : gNameCtrl.text.trim();
+              Navigator.pop(ctx, {'email': em, 'name': nm});
+            },
+            child: const Text('Continuar', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
   Map<String, dynamic> _buildProfile({
     required String nickname,
     required String email,
@@ -179,7 +274,15 @@ class _AuthScreenState extends State<AuthScreen> {
       'provider': provider,
       'avatarPath': null,
       'avatarUrl': avatarUrl,
-      'bio': 'A transmitir com o HELL Live!',
+      'bannerId': 'bn_cyber',
+      'bannerImagePath': null,
+      'bio': 'A transmitir ao vivo com o HELL Live!',
+      'gender': 'Não especificado',
+      'birthDate': '',
+      'country': 'Portugal',
+      'discord': '',
+      'whatsapp': '',
+      'publicProfile': true,
       'status': 'online',
       'securityMethods': password.isNotEmpty ? <String>['password'] : <String>[],
       'pinSecret': '',
@@ -192,14 +295,14 @@ class _AuthScreenState extends State<AuthScreen> {
     final id = _emailCtrl.text.trim();
     final pass = _passCtrl.text.trim();
     if (id.isEmpty || pass.length < 4) {
-      _msg('Preenche o email/utilizador e senha (mínimo 4 caracteres).');
+      _msg('Preenche o e-mail/utilizador e a palavra-passe (mínimo 4 caracteres).');
       return;
     }
 
     final existing = await UserAccountManager.findRegisteredUser(id);
     if (_isRegister) {
       if (existing != null) {
-        _msg('Conta já registada. Usa "Entrar".');
+        _msg('Esta conta já está registada. Usa o separador "Entrar".');
         setState(() => _isRegister = false);
         return;
       }
@@ -211,7 +314,7 @@ class _AuthScreenState extends State<AuthScreen> {
       if (mounted) widget.onAuthenticated(user);
     } else {
       if (existing == null) {
-        _msg('Conta não encontrada. Cria primeiro o registo.');
+        _msg('Conta não encontrada. Cria primeiro o teu registo.');
         setState(() => _isRegister = true);
         return;
       }
@@ -235,23 +338,51 @@ class _AuthScreenState extends State<AuthScreen> {
             constraints: const BoxConstraints(maxWidth: 420),
             child: Column(
               children: [
+                Image.asset('icon.png', height: 76, errorBuilder: (_, __, ___) => const Icon(Icons.local_fire_department, size: 64, color: Color(0xFF38BDF8))),
+                const SizedBox(height: 8),
                 const Text('HELL LIVE', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: Color(0xFF38BDF8), letterSpacing: 2)),
                 const SizedBox(height: 16),
                 Row(
                   children: [
-                    Expanded(child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: !_isRegister ? const Color(0xFF1E78FF) : const Color(0xFF0E1D47)), onPressed: () => setState(() => _isRegister = false), child: const Text('Entrar', style: TextStyle(color: Colors.white)))),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(backgroundColor: !_isRegister ? const Color(0xFF1E78FF) : const Color(0xFF0E1D47)),
+                        onPressed: () => setState(() => _isRegister = false),
+                        child: const Text('Entrar', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
                     const SizedBox(width: 8),
-                    Expanded(child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: _isRegister ? const Color(0xFF1E78FF) : const Color(0xFF0E1D47)), onPressed: () => setState(() => _isRegister = true), child: const Text('Criar Registo', style: TextStyle(color: Colors.white)))),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(backgroundColor: _isRegister ? const Color(0xFF1E78FF) : const Color(0xFF0E1D47)),
+                        onPressed: () => setState(() => _isRegister = true),
+                        child: const Text('Criar Registo', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.black87, padding: const EdgeInsets.symmetric(vertical: 12)),
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.black87,
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
                     onPressed: _busy ? null : _googleAuth,
-                    icon: const Icon(Icons.g_mobiledata, size: 28, color: Colors.redAccent),
-                    label: Text(_isRegister ? 'Registar com Google' : 'Entrar com Google'),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const GoogleOfficialLogo(size: 22),
+                        const SizedBox(width: 12),
+                        Text(
+                          _isRegister ? 'Registar com o Google' : 'Continuar com o Google',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -261,7 +392,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   TextField(controller: _phoneCtrl, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Telemóvel (Opcional)', isDense: true)),
                   const SizedBox(height: 10),
                 ],
-                TextField(controller: _emailCtrl, decoration: const InputDecoration(labelText: 'Email ou Utilizador', isDense: true)),
+                TextField(controller: _emailCtrl, decoration: const InputDecoration(labelText: 'E-mail ou Nome de Utilizador', isDense: true)),
                 const SizedBox(height: 10),
                 TextField(
                   controller: _passCtrl,
@@ -317,7 +448,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
       final ok = await _localAuth.authenticate(localizedReason: 'Desbloqueia o HELL Live');
       if (ok) widget.onUnlocked();
     } catch (_) {
-      setState(() => _error = 'Falha na biometria. Usa a senha abaixo.');
+      setState(() => _error = 'Falha na biometria. Utiliza a palavra-passe abaixo.');
     }
   }
 
@@ -326,7 +457,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
     if (val == (widget.user['pinSecret'] ?? '') || val == (widget.user['passwordSecret'] ?? '')) {
       widget.onUnlocked();
     } else {
-      setState(() => _error = 'PIN ou senha incorretos.');
+      setState(() => _error = 'PIN ou palavra-passe incorretos.');
     }
   }
 
@@ -356,7 +487,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
                   child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF)), onPressed: _check, child: const Text('Entrar', style: TextStyle(color: Colors.white))),
                 ),
                 if (_error.isNotEmpty) ...[const SizedBox(height: 8), Text(_error, style: const TextStyle(color: Colors.redAccent))],
-                TextButton(onPressed: widget.onLogout, child: const Text('Trocar Conta', style: TextStyle(color: Colors.white54))),
+                TextButton(onPressed: widget.onLogout, child: const Text('Trocar de Conta', style: TextStyle(color: Colors.white54))),
               ],
             ),
           ),
@@ -380,7 +511,12 @@ class _ProfilePrivacySecurityScreenState extends State<ProfilePrivacySecurityScr
   late TextEditingController _nickCtrl;
   late TextEditingController _bioCtrl;
   late TextEditingController _phoneCtrl;
+  late TextEditingController _birthCtrl;
+  late TextEditingController _discordCtrl;
+  late String _gender;
   late String _status;
+  late String _bannerId;
+  late bool _publicProfile;
   late List<String> _methods;
 
   @override
@@ -389,7 +525,12 @@ class _ProfilePrivacySecurityScreenState extends State<ProfilePrivacySecurityScr
     _nickCtrl = TextEditingController(text: widget.user['nickname'] ?? '');
     _bioCtrl = TextEditingController(text: widget.user['bio'] ?? '');
     _phoneCtrl = TextEditingController(text: widget.user['phone'] ?? '');
+    _birthCtrl = TextEditingController(text: widget.user['birthDate'] ?? '');
+    _discordCtrl = TextEditingController(text: widget.user['discord'] ?? '');
+    _gender = widget.user['gender'] ?? 'Não especificado';
     _status = widget.user['status'] ?? 'online';
+    _bannerId = widget.user['bannerId'] ?? 'bn_cyber';
+    _publicProfile = widget.user['publicProfile'] ?? true;
     _methods = List<String>.from(widget.user['securityMethods'] ?? []);
   }
 
@@ -398,58 +539,118 @@ class _ProfilePrivacySecurityScreenState extends State<ProfilePrivacySecurityScr
     updated['nickname'] = _nickCtrl.text.trim();
     updated['bio'] = _bioCtrl.text.trim();
     updated['phone'] = _phoneCtrl.text.trim();
+    updated['birthDate'] = _birthCtrl.text.trim();
+    updated['discord'] = _discordCtrl.text.trim();
+    updated['gender'] = _gender;
     updated['status'] = _status;
+    updated['bannerId'] = _bannerId;
+    updated['publicProfile'] = _publicProfile;
     updated['securityMethods'] = _methods;
     await UserAccountManager.saveUser(updated);
     widget.onUserUpdated(updated);
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Perfil atualizado!')));
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Perfil público e segurança guardados!')));
+  }
+
+  Widget _buildBannerHeader(Map<String, dynamic> bannerData) {
+    final pCol = Color(int.parse(bannerData['primary'] ?? '0xFF0EA5E9'));
+    final sCol = Color(int.parse(bannerData['secondary'] ?? '0xFF1E3A8A'));
+    final customBanner = widget.user['bannerImagePath'];
+
+    return Container(
+      height: 150,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [pCol, sCol]),
+        image: (customBanner != null && File(customBanner).existsSync())
+            ? DecorationImage(image: FileImage(File(customBanner)), fit: BoxFit.cover)
+            : null,
+        border: Border.all(color: const Color(0xFF38BDF8), width: 1.5),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            top: 8,
+            right: 8,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.black54, padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6)),
+              onPressed: () async {
+                final res = await FilePicker.platform.pickFiles(type: FileType.image);
+                if (res != null && res.files.single.path != null) {
+                  final updated = Map<String, dynamic>.from(widget.user);
+                  updated['bannerImagePath'] = res.files.single.path!;
+                  await UserAccountManager.saveUser(updated);
+                  widget.onUserUpdated(updated);
+                }
+              },
+              icon: const Icon(Icons.wallpaper, size: 15, color: Colors.white),
+              label: const Text('Banner Próprio (GIF/Foto)', style: TextStyle(color: Colors.white, fontSize: 11)),
+            ),
+          ),
+          Positioned(
+            bottom: 12,
+            left: 16,
+            child: GestureDetector(
+              onTap: () async {
+                final res = await FilePicker.platform.pickFiles(type: FileType.image);
+                if (res != null && res.files.single.path != null) {
+                  final updated = Map<String, dynamic>.from(widget.user);
+                  updated['avatarPath'] = res.files.single.path!;
+                  await UserAccountManager.saveUser(updated);
+                  widget.onUserUpdated(updated);
+                }
+              },
+              child: UserAccountManager.buildUserAvatar(widget.user, radius: 36),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final activeBanner = DefaultMediaLibrary.profileBannersCatalog.firstWhere(
+      (b) => b['id'] == _bannerId,
+      orElse: () => DefaultMediaLibrary.profileBannersCatalog.first,
+    );
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Center(
-          child: GestureDetector(
-            onTap: () async {
-              final res = await FilePicker.platform.pickFiles(type: FileType.image);
-              if (res != null && res.files.single.path != null) {
-                final updated = Map<String, dynamic>.from(widget.user);
-                updated['avatarPath'] = res.files.single.path!;
-                await UserAccountManager.saveUser(updated);
-                widget.onUserUpdated(updated);
-              }
-            },
-            child: UserAccountManager.buildUserAvatar(widget.user, radius: 42),
+        _buildBannerHeader(activeBanner),
+        const SizedBox(height: 12),
+        const Text('🎨 Biblioteca de Banners de Perfil:', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF38BDF8), fontSize: 13)),
+        const SizedBox(height: 6),
+        SizedBox(
+          height: 44,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            children: DefaultMediaLibrary.profileBannersCatalog.map((b) {
+              final sel = _bannerId == b['id'];
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ChoiceChip(
+                  label: Text('${b['name']} (${b['type']})', style: const TextStyle(fontSize: 11.5)),
+                  selected: sel,
+                  selectedColor: const Color(0xFF1E78FF),
+                  onSelected: (_) {
+                    final updated = Map<String, dynamic>.from(widget.user);
+                    updated['bannerImagePath'] = null;
+                    widget.onUserUpdated(updated);
+                    setState(() => _bannerId = b['id']!);
+                  },
+                ),
+              );
+            }).toList(),
           ),
         ),
         const SizedBox(height: 12),
-        TextField(controller: _nickCtrl, decoration: const InputDecoration(labelText: 'Nickname')),
+        TextField(controller: _nickCtrl, decoration: const InputDecoration(labelText: 'Nome de Criador / Nickname')),
         const SizedBox(height: 8),
-        TextField(controller: _bioCtrl, decoration: const InputDecoration(labelText: 'Bio')),
+        TextField(controller: _bioCtrl, maxLines: 2, decoration: const InputDecoration(labelText: 'Biografia (Sobre ti para os seguidores)')),
         const SizedBox(height: 8),
-        TextField(controller: _phoneCtrl, decoration: const InputDecoration(labelText: 'Telemóvel')),
-        const SizedBox(height: 12),
-        DropdownButtonFormField<String>(
-          value: _status,
-          items: const [
-            DropdownMenuItem(value: 'online', child: Text('Online')),
-            DropdownMenuItem(value: 'dnd', child: Text('Não Incomodar')),
-            DropdownMenuItem(value: 'invisible', child: Text('Invisível')),
-            DropdownMenuItem(value: 'offline', child: Text('Offline')),
-          ],
-          onChanged: (v) => setState(() => _status = v ?? 'online'),
-        ),
-        SwitchListTile(
-          title: const Text('Bloqueio por Biometria'),
-          value: _methods.contains('biometric'),
-          onChanged: (v) => setState(() => v ? _methods.add('biometric') : _methods.remove('biometric')),
-        ),
-        const SizedBox(height: 12),
-        ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF)), onPressed: _save, child: const Text('Guardar', style: TextStyle(color: Colors.white))),
-        TextButton(onPressed: widget.onLogout, child: const Text('Terminar Sessão', style: TextStyle(color: Colors.redAccent))),
-      ],
-    );
-  }
-}
+        Row(
+          children: [
+            Expanded(
+              child: DropdownButtonFormField<String>(
+                value: _gender,
