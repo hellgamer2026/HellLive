@@ -46,87 +46,14 @@ class DefaultMediaLibrary {
   static const String _f3d = 'https://githubusercontent.com';
 
   static final List<Map<String, dynamic>> tiktokGiftsCatalog = [
-    {
-      'id': 'g1',
-      'name': 'Rosa (Rose)',
-      'coins': 1,
-      'enabled': true,
-      'ttsThank': true,
-      'customVoicePath': null,
-      'png': '$_f3d/Animals%20and%20Nature/Rose.png',
-      'sound': 'https://google.com',
-    },
-    {
-      'id': 'g2',
-      'name': 'TikTok / GG',
-      'coins': 1,
-      'enabled': true,
-      'ttsThank': true,
-      'customVoicePath': null,
-      'png': '$_f3d/Activities/Video%20Game.png',
-      'sound': 'https://google.com',
-    },
-    {
-      'id': 'g3',
-      'name': 'Coração com Dedos',
-      'coins': 5,
-      'enabled': true,
-      'ttsThank': true,
-      'customVoicePath': null,
-      'png': '$_f3d/Smilies/Sparkling%20Heart.png',
-      'sound': 'https://google.com',
-    },
-    {
-      'id': 'g4',
-      'name': 'Perfume VIP',
-      'coins': 20,
-      'enabled': true,
-      'ttsThank': true,
-      'customVoicePath': null,
-      'png': '$_f3d/Objects/Gem%20Stone.png',
-      'sound': 'https://google.com',
-    },
-    {
-      'id': 'g5',
-      'name': 'Coroa Imperial',
-      'coins': 99,
-      'enabled': true,
-      'ttsThank': true,
-      'customVoicePath': null,
-      'png': '$_f3d/Objects/Crown.png',
-      'sound': 'https://google.com',
-    },
-    {
-      'id': 'g6',
-      'name': 'Chuva de Dinheiro',
-      'coins': 500,
-      'enabled': true,
-      'ttsThank': true,
-      'customVoicePath': null,
-      'png': '$_f3d/Objects/Money%20with%20Wings.png',
-      'sound': 'https://google.com',
-    },
-    {
-    
-      'id': 'g7',
-      'name': 'Foguete Espacial',
-      'coins': 2000,
-      'enabled': true,
-      'ttsThank': true,
-      'customVoicePath': null,
-      'png': '$_f3d/Travel%20and%20places/Rocket.png',
-      'sound': 'https://google.com',
-    },
-    {
-      'id': 'g8',
-      'name': 'Leão Rei (Lion)',
-      'coins': 29999,
-      'enabled': true,
-      'ttsThank': true,
-      'customVoicePath': null,
-      'png': '$_f3d/Animals%20and%20Nature/Lion.png',
-      'sound': 'https://google.com',
-    },
+    {'id': 'g1', 'name': 'Rosa (Rose)', 'coins': 1, 'enabled': true, 'ttsThank': true, 'customVoicePath': null, 'png': '$_f3d/Animals%20and%20Nature/Rose.png', 'sound': 'https://google.com'},
+    {'id': 'g2', 'name': 'TikTok / GG', 'coins': 1, 'enabled': true, 'ttsThank': true, 'customVoicePath': null, 'png': '$_f3d/Activities/Video%20Game.png', 'sound': 'https://google.com'},
+    {'id': 'g3', 'name': 'Coração com Dedos', 'coins': 5, 'enabled': true, 'ttsThank': true, 'customVoicePath': null, 'png': '$_f3d/Smilies/Sparkling%20Heart.png', 'sound': 'https://google.com'},
+    {'id': 'g4', 'name': 'Perfume VIP', 'coins': 20, 'enabled': true, 'ttsThank': true, 'customVoicePath': null, 'png': '$_f3d/Objects/Gem%20Stone.png', 'sound': 'https://google.com'},
+    {'id': 'g5', 'name': 'Coroa Imperial', 'coins': 99, 'enabled': true, 'ttsThank': true, 'customVoicePath': null, 'png': '$_f3d/Objects/Crown.png', 'sound': 'https://google.com'},
+    {'id': 'g6', 'name': 'Chuva de Dinheiro', 'coins': 500, 'enabled': true, 'ttsThank': true, 'customVoicePath': null, 'png': '$_f3d/Objects/Money%20with%20Wings.png', 'sound': 'https://google.com'},
+    {'id': 'g7', 'name': 'Foguete Espacial', 'coins': 2000, 'enabled': true, 'ttsThank': true, 'customVoicePath': null, 'png': '$_f3d/Travel%20and%20places/Rocket.png', 'sound': 'https://google.com'},
+    {'id': 'g8', 'name': 'Leão Rei (Lion)', 'coins': 29999, 'enabled': true, 'ttsThank': true, 'customVoicePath': null, 'png': '$_f3d/Animals%20and%20Nature/Lion.png', 'sound': 'https://google.com'},
   ];
 
   static final List<Map<String, dynamic>> fullTikTokPngSelectableList = [
@@ -149,7 +76,6 @@ class DefaultMediaLibrary {
     {'name': 'Dragão Mítico', 'coins': 34999, 'png': '$_f3d/Animals%20and%20Nature/Dragon.png'},
     {'name': 'Unicórnio Mágico', 'coins': 15000, 'png': '$_f3d/Animals%20and%20Nature/Unicorn.png'},
   ];
-
   static final List<Map<String, String>> builtInSounds = [
     {'name': 'Pop Bolha Rápido', 'cat': 'Notificação', 'url': 'https://google.com'},
     {'name': 'Aplausos & Celebração', 'cat': 'Vitória', 'url': 'https://google.com'},
@@ -191,7 +117,28 @@ class DefaultMediaLibrary {
     {'name': 'Sino de Alerta 3D', 'url': '$_f3d/Objects/Bell.png'},
   ];
 
-   static final List<Map<String, String>> goalOverlaysCatalog = [
+  static final List<Map<String, String>> goalOverlaysCatalog = [
     {'id': 'ov_cyber_3d', 'name': 'Cyberpunk Reactor 3D (Néon Volumétrico)', 'type': 'cyber_3d', 'cat': 'Gaming / Sci-Fi', 'desc': 'Núcleo energético 3D com reflexos metálicos e pulso néon dinâmico'},
     {'id': 'ov_gold_3d', 'name': 'Ouro & Carbono VIP 3D (Luxo)', 'type': 'gold_3d', 'cat': 'VIP / Doações', 'desc': 'Barra chanfrada 3D em fibra de carbono e ouro polido com brilho especular'},
     {'id': 'ov_rocket_3d', 'name': 'Lançamento Orbital 3D (Foguetão Pro)', 'type': 'rocket_3d', 'cat': 'Interativo', 'desc': 'Telemetria espacial 3D com propulsão a plasma e altitude em tempo real'},
+    {'id': 'ov_plasma_3d', 'name': 'Fusão Plasma & Lava 3D', 'type': 'plasma_3d', 'cat': 'Ação / Hype', 'desc': 'Tubo de contenção 3D com energia térmica líquida e faíscas'},
+    {'id': 'ov_subathon_3d', 'name': 'Subathon Chrono 3D (Barra + Relógio)', 'type': 'subathon_3d', 'cat': 'Maratona', 'desc': 'Painel glassmorphism 3D com cronómetro digital de maratona'},
+    {'id': 'ov_emerald_3d', 'name': 'Esmeralda & Cristal 3D', 'type': 'emerald_3d', 'cat': 'Minimal Pro', 'desc': 'Prisma 3D translúcido com iluminação interna verde esmeralda'},
+  ];
+
+  static final List<Map<String, String>> royaltyFreeMusicRepo = [
+    {'title': 'Lo-Fi Chill Café (Sem Copyright)', 'artist': 'HELL Beats', 'url': 'https://google.com'},
+    {'title': 'Cyberpunk Synth Wave', 'artist': 'Néon Studio', 'url': 'https://google.com'},
+    {'title': 'Arena Gaming Bass', 'artist': 'Pro Stream Audio', 'url': 'https://google.com'},
+    {'title': 'Night Rain Relax', 'artist': 'Ambient Free', 'url': 'https://google.com'},
+    {'title': 'Victory Celebration Loop', 'artist': 'Streamers Hub', 'url': 'https://google.com'},
+  ];
+
+  static final List<Map<String, dynamic>> tikfinityOverlayCategories = [
+    {'category': 'Overlays de Meta', 'items': [{'name': 'Meta de Likes (Likes Goal)', 'desc': 'Barra de progresso animada para likes da live', 'scene': 'goal_likes', 'previewType': 'bar'}, {'name': 'Meta de Seguidores (Follows Goal)', 'desc': 'Contador visual para novos seguidores', 'scene': 'goal_follows', 'previewType': 'bar'}, {'name': 'Meta de Espectadores (Viewer Count)', 'desc': 'Mostra o pico de audiência em tempo real', 'scene': 'goal_viewers', 'previewType': 'bar'}, {'name': 'Meta de Moedas (Coins Earned)', 'desc': 'Progresso total de diamantes e moedas', 'scene': 'goal_coins', 'previewType': 'bar'}, {'name': 'Meta de Subscritores (New Sub)', 'desc': 'Barra dedicada a novos assinantes', 'scene': 'goal_subs', 'previewType': 'bar'}]},
+    {'category': 'Overlay de Meta com Contagem Regressiva', 'items': [{'name': 'Countdown Likes', 'desc': 'Meta de likes com relógio decrescente', 'scene': 'cd_likes', 'previewType': 'timer'}, {'name': 'Countdown Follows', 'desc': 'Meta de seguidores com cronómetro', 'scene': 'cd_follows', 'previewType': 'timer'}, {'name': 'Countdown Viewer Count', 'desc': 'Desafio de audiência contra o relógio', 'scene': 'cd_viewers', 'previewType': 'timer'}, {'name': 'Countdown Coins Earned', 'desc': 'Subathon / Desafio de moedas com tempo', 'scene': 'cd_coins', 'previewType': 'timer'}, {'name': 'Countdown New Sub', 'desc': 'Contagem regressiva para novos subs', 'scene': 'cd_subs', 'previewType': 'timer'}]},
+    {'category': 'Widgets Interativos & Sociais', 'items': [{'name': 'Overlay da Roleta (Wheel)', 'desc': 'Exibe a roleta giratória em direto no OBS/Studio', 'scene': 'wheel', 'previewType': 'wheel'}, {'name': 'Rotador de Redes Sociais', 'desc': 'Alterna automaticamente Instagram, Discord, YouTube e TikTok', 'scene': 'social_rotator', 'previewType': 'social'}, {'name': 'Contagem de Seguidores Ao Vivo', 'desc': 'Contador digital em tempo real com animação', 'scene': 'follower_counter', 'previewType': 'counter'}]},
+    {'category': 'Overlays de Presentes & Ranking', 'items': [{'name': 'Top Gift (Maior Presente)', 'desc': 'Destaca o utilizador que enviou o presente mais valioso', 'scene': 'top_gift', 'previewType': 'podium'}, {'name': 'Top Streak (Mais Presentes)', 'desc': 'Destaca quem enviou a maior sequência de presentes', 'scene': 'top_streak', 'previewType': 'podium'}]},
+    {'category': 'Overlays Gráficos & Câmara', 'items': [{'name': 'Webcam Frames (Molduras Câmara)', 'desc': 'Moldura néon iluminada para a tua câmara', 'scene': 'cam_frame', 'previewType': 'frame'}, {'name': 'Overlays Completos HUD', 'desc': 'Layout completo de ecrã para gaming e conversa', 'scene': 'live', 'previewType': 'frame'}, {'name': 'Chat Banners', 'desc': 'Faixa elegante para destacar mensagens do chat na tela', 'scene': 'chat_banner', 'previewType': 'banner'}]},
+  ];
+}
