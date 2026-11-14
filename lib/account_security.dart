@@ -1182,7 +1182,7 @@ class ProfilePrivacySecurityScreen extends StatefulWidget {
   const ProfilePrivacySecurityScreen({super.key, required this.user, required this.onUserUpdated, required this.onLogout});
 
   @override
-  State<ProfilePrivacySecurityScreen> createState() => _ProfilePrivacySecurityScreenState();
+   State<ProfilePrivacySecurityScreen> createState() => _ProfilePrivacySecurityScreenState();
 }
 
 class _ProfilePrivacySecurityScreenState extends State<ProfilePrivacySecurityScreen> {
