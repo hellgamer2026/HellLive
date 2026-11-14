@@ -693,7 +693,39 @@ class _ActionsStudioTabState extends State<ActionsStudioTab> {
                             color: isPlaying ? Colors.redAccent : Colors.greenAccent,
                           ),
                           tooltip: isPlaying ? 'Parar' : 'Testar Áudio',
-  Widget _buildSelectedGoalOverlayGraphic(String overlayType, double pct, String title, int current, int target) {
+                         onPressed: () => _togglePlayAudio(url, onStateUpdate: () => setModalState(() {})),
+                      ),
+                      onTap: () {
+                        setModalState(() {
+                          chosenSound = url;
+                          customVoicePath = null;
+                        });
+                      },
+                    ),
+                  );
+                }),
+                const SizedBox(height: 12),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF), padding: const EdgeInsets.symmetric(vertical: 13)),
+                  onPressed: () async {
+                    await widget.sfxPlayer.stop();
+                    setState(() => _currentlyPlayingUrl = null);
+                    onSave(chosenMedia, chosenSound, customVoicePath, ttsThank, msgCtrl.text.trim());
+                    if (ctx.mounted) Navigator.pop(ctx);
+                  },
+                  child: const Text('Guardar Alterações', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    ),
+  );
+}
+
+Widget _buildSelectedGoalOverlayGraphic(String overlayType, double pct, String title, int current, int target) {
+
     final completed = pct >= 1.0;
 
     Color primaryGlow = const Color(0xFF38BDF8);
@@ -1092,6 +1124,48 @@ class _ActionsStudioTabState extends State<ActionsStudioTab> {
                                   'id': 'tk_${DateTime.now().millisecondsSinceEpoch}_$i',
                                   'name': item['name'],
                                   'coins': item['coins'],
+                                  'enabled': true,
+                                  'ttsThank': true,
+                                  'customVoicePath': null,
+                                  'png': item['png'],
+                                  'sound': DefaultMediaLibrary.builtInSounds.first['url'],
+                                });
+                              });
+                              widget.onStateChanged();
+                              Navigator.pop(ctx);
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: _neonCard(),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Image.network(
+                                    item['png'].toString(),
+                                    width: 48,
+                                    height: 48,
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (_, __, ___) => const Icon(Icons.card_giftcard, size: 40, color: Color(0xFF38BDF8)),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(item['name'].toString(), textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                  Text('${item['coins']} moedas', style: const TextStyle(fontSize: 10, color: Color(0xFF38BDF8))),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildUniformActionCard({
     required String mediaUrl,
     required String title,
