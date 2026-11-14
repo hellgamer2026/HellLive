@@ -565,3 +565,141 @@ class _InteractionScreenState extends State<InteractionScreen> with SingleTicker
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFF050B1E),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: const Color(0xFF38BDF8), width: 2.5),
+                                  boxShadow: const [BoxShadow(color: Colors.black87, blurRadius: 8)],
+                                ),
+                                child: Image.asset('icon.png', fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.local_fire_department, color: Color(0xFF38BDF8))),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Text(_lastWinner, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF38BDF8))),
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF), padding: const EdgeInsets.symmetric(vertical: 12)),
+                              onPressed: _spinWheel,
+                              icon: const Icon(Icons.refresh, color: Colors.white),
+                              label: const Text('GIRAR ROLETA 3D', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                          Row(
+                            children: [
+                              Expanded(child: TextField(controller: _optionCtrl, decoration: const InputDecoration(hintText: 'Adicionar prémio / desafio...', isDense: true))),
+                              IconButton(
+                                icon: const Icon(Icons.add_circle, color: Color(0xFF38BDF8)),
+                                onPressed: () {
+                                  if (_optionCtrl.text.trim().isNotEmpty) {
+                                    setState(() {
+                                      _options.add(_optionCtrl.text.trim());
+                                      _optionCtrl.clear();
+                                    });
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                          Wrap(
+                            spacing: 6,
+                            children: _options.map((o) => Chip(label: Text(o, style: const TextStyle(fontSize: 11)), onDeleted: () => setState(() => _options.remove(o)))).toList(),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    _buildRankingCard('🏆 TOP GERAL DE INTERAÇÕES', topOverall, 'pts', const Color(0xFF38BDF8), medals),
+                    const SizedBox(height: 12),
+                    _buildRankingCard('💎 TOP PRESENTES DA LIVE', widget.topGifts, 'moedas', const Color(0xFFFACC15), medals),
+                    const SizedBox(height: 12),
+                    _buildRankingCard('❤️ TOP GOSTOS (LIKES)', widget.topLikes, 'likes', const Color(0xFFF43F5E), medals),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  Widget _buildRankingCard(String title, List<Map<String, dynamic>> list, String unit, Color accent, List<String> medals) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: _studioCardDeco(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: TextStyle(fontWeight: FontWeight.w900, color: accent, fontSize: 14)),
+          const SizedBox(height: 10),
+          if (list.isEmpty)
+            const Text('Aguardando interações dos espectadores em direto...', style: TextStyle(color: Colors.white54, fontSize: 12))
+          else
+            ...list.take(5).toList().asMap().entries.map((e) {
+              final avatar = (e.value['avatar'] ?? '').toString();
+              return ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(e.key < 3 ? medals[e.key] : '#${e.key + 1}', style: const TextStyle(fontSize: 18)),
+                    const SizedBox(width: 8),
+                    CircleAvatar(
+                      radius: 16,
+                      backgroundColor: accent.withOpacity(0.25),
+                      backgroundImage: avatar.startsWith('http') ? NetworkImage(avatar) : null,
+                      child: !avatar.startsWith('http') ? Icon(Icons.person, size: 16, color: accent) : null,
+                    ),
+                  ],
+                ),
+                title: Text(e.value['user'] ?? 'Espectador', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
+                trailing: Text('${e.value['score']} $unit', style: TextStyle(color: accent, fontWeight: FontWeight.bold, fontSize: 12.5)),
+              );
+            }),
+        ],
+      ),
+    );
+  }
+}
+
+class _Wheel3DPainter extends CustomPainter {
+  final List<String> options;
+  final List<Color> colors;
+  _Wheel3DPainter({required this.options, required this.colors});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (options.isEmpty) return;
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
+    final sweep = (2 * pi) / options.length;
+
+    for (int i = 0; i < options.length; i++) {
+      final paint = Paint()
+        ..color = colors[i % colors.length]
+        ..style = PaintingStyle.fill;
+      canvas.drawArc(Rect.fromCircle(center: center, radius: radius), i * sweep, sweep, true, paint);
+
+      final border = Paint()
+        ..color = Colors.white24
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5;
+      canvas.drawArc(Rect.fromCircle(center: center, radius: radius), i * sweep, sweep, true, border);
+    }
+
+    final gloss = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Colors.white.withOpacity(0.32), Colors.transparent],
+      ).createShader(Rect.fromCircle(center: center, radius: radius));
+    canvas.drawCircle(center, radius, gloss);
+  }
+
+  @override
+  bool shouldRepaint(covariant _Wheel3DPainter oldDelegate) => true;
+}
