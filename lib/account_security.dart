@@ -652,5 +652,52 @@ class _ProfilePrivacySecurityScreenState extends State<ProfilePrivacySecurityScr
         Row(
           children: [
             Expanded(
-              child: DropdownButtonFormField<String>(
+                child: DropdownButtonFormField<String>(
                 value: _gender,
+                decoration: const InputDecoration(labelText: 'Género (Opcional)'),
+                items: const [
+                  DropdownMenuItem(value: 'Não especificado', child: Text('Não especificado')),
+                  DropdownMenuItem(value: 'Masculino', child: Text('Masculino')),
+                  DropdownMenuItem(value: 'Feminino', child: Text('Feminino')),
+                  DropdownMenuItem(value: 'Outro', child: Text('Outro')),
+                ],
+                onChanged: (v) => setState(() => _gender = v ?? 'Não especificado'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(child: TextField(controller: _birthCtrl, decoration: const InputDecoration(labelText: 'Data Nascimento (Opcional)'))),
+          ],
+        ),
+        const SizedBox(height: 8),
+        TextField(controller: _discordCtrl, decoration: const InputDecoration(labelText: 'Discord / Redes Sociais')),
+        const SizedBox(height: 8),
+        TextField(controller: _phoneCtrl, decoration: const InputDecoration(labelText: 'Telemóvel')),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          value: _status,
+          decoration: const InputDecoration(labelText: 'Estado na Comunidade'),
+          items: const [
+            DropdownMenuItem(value: 'online', child: Text('🟢 Online')),
+            DropdownMenuItem(value: 'dnd', child: Text('🟠 Não Incomodar')),
+            DropdownMenuItem(value: 'invisible', child: Text('⚪ Invisível')),
+            DropdownMenuItem(value: 'offline', child: Text('🔴 Offline')),
+          ],
+          onChanged: (v) => setState(() => _status = v ?? 'online'),
+        ),
+        SwitchListTile(
+          title: const Text('Perfil Público (Visível para seguidores na Comunidade)'),
+          value: _publicProfile,
+          onChanged: (v) => setState(() => _publicProfile = v),
+        ),
+        SwitchListTile(
+          title: const Text('Bloqueio por Biometria / Impressão Digital'),
+          value: _methods.contains('biometric'),
+          onChanged: (v) => setState(() => v ? _methods.add('biometric') : _methods.remove('biometric')),
+        ),
+        const SizedBox(height: 12),
+        ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF)), onPressed: _save, child: const Text('Guardar Alterações', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+        TextButton(onPressed: widget.onLogout, child: const Text('Terminar Sessão', style: TextStyle(color: Colors.redAccent))),
+      ],
+    );
+  }
+}
