@@ -1398,3 +1398,386 @@ Widget _buildSelectedGoalOverlayGraphic(String overlayType, double pct, String t
                         title: al['name'],
                         subtitle: 'Toca na imagem ou no lápis para personalizar',
                         isEnabled: al['enabled'] == true,
+                        onDelete: () => setState(() => widget.alertsList.removeAt(idx)),
+                        onTapImage: () => _openQuickImagePicker(al['media'], (newImg) => setState(() => al['media'] = newImg)),
+                        onEdit: () => _openRichCustomizer(
+                          title: al['name'],
+                          initialMedia: al['media'],
+                          initialSound: al['sound'] ?? '',
+                          initialCustomVoice: al['customVoicePath'],
+                          initialTtsThank: al['ttsThank'] ?? true,
+                          initialCustomMessage: al['customMessage'],
+                          defaultMessageTemplate: defaultMsg,
+                          onSave: (m, s, vPath, tts, msg) => setState(() {
+                            al['media'] = m;
+                            al['sound'] = s;
+                            al['customVoicePath'] = vPath;
+                            al['ttsThank'] = tts;
+                            al['customMessage'] = msg;
+                          }),
+                        ),
+                        onPlayPreview: () {
+                          final rawMsg = (al['customMessage'] == null || al['customMessage'].toString().trim().isEmpty) ? defaultMsg : al['customMessage'].toString();
+                          final spokenMsg = rawMsg.replaceAll('{user}', 'Hélder').replaceAll('{nome}', 'Hélder');
+                          _openOfflinePreview(
+                            title: al['name'],
+                            mediaUrl: al['media'],
+                            soundUrl: al['sound'] ?? '',
+                            customVoicePath: al['customVoicePath'],
+                            message: spokenMsg,
+                          );
+                          if (!hasVoice && (al['ttsThank'] ?? true) == true) {
+                            widget.onSpeakVoice(spokenMsg);
+                          }
+                        },
+                        onToggleEnabled: (v) => setState(() => al['enabled'] = v),
+                      );
+                    }),
+                  ],
+                ),
+                ListView(
+                  padding: const EdgeInsets.all(14),
+                  children: [
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF), padding: const EdgeInsets.symmetric(vertical: 12)),
+                      onPressed: () {
+                        setState(() {
+                          widget.goalsList.add({
+                            'id': 'goal_${DateTime.now().millisecondsSinceEpoch}',
+                            'title': 'Nova Meta da Live',
+                            'current': 250,
+                            'target': 1000,
+                            'overlayType': 'cyber_3d',
+                          });
+                        });
+                        widget.onStateChanged();
+                      },
+                      icon: const Icon(Icons.add_chart, color: Colors.white),
+                      label: const Text('+ Criar Nova Meta 3D', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    ),
+                    const SizedBox(height: 12),
+                    ...widget.goalsList.asMap().entries.map((entry) {
+                      final idx = entry.key;
+                      final goal = entry.value;
+                      final int current = goal['current'] ?? 0;
+                      final int target = (goal['target'] ?? 1000) == 0 ? 1000 : goal['target'];
+                      final double pct = (current / target).clamp(0.0, 1.0);
+                      final String overlayType = goal['overlayType'] ?? 'cyber_3d';
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 14),
+                        padding: const EdgeInsets.all(12),
+                        decoration: _neonCard(),
+                        child: Column(
+                          children: [
+                            _buildSelectedGoalOverlayGraphic(overlayType, pct, goal['title'] ?? 'Meta', current, target),
+                            const SizedBox(height: 10),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
+                                  onPressed: () => _openGoalEditAndOverlayPicker(goal),
+                                  icon: const Icon(Icons.view_in_ar_rounded, size: 16, color: Colors.white),
+                                  label: const Text('Galeria Overlays 3D', style: TextStyle(color: Colors.white, fontSize: 12)),
+                                ),
+                                ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green, padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
+                                  onPressed: () => _openGoalExclusiveSimulationWindow(goal),
+                                  icon: const Icon(Icons.play_arrow, size: 18, color: Colors.white),
+                                  label: const Text('Simular Ao Vivo', style: TextStyle(color: Colors.white, fontSize: 12)),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                                  onPressed: () {
+                                    setState(() => widget.goalsList.removeAt(idx));
+                                    widget.onStateChanged();
+                                  },
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+                const GoogleTtsVoicesManager(),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+class GoogleTtsVoicesManager extends StatefulWidget {
+  const GoogleTtsVoicesManager({super.key});
+
+  @override
+  State<GoogleTtsVoicesManager> createState() => _GoogleTtsVoicesManagerState();
+}
+
+class _GoogleTtsVoicesManagerState extends State<GoogleTtsVoicesManager> {
+  final FlutterTts _tts = FlutterTts();
+  List<Map<String, String>> _allVoices = [];
+  Set<String> _hiddenVoiceNames = {};
+  String? _selectedVoiceName;
+  String _genderFilter = 'all';
+  String _langFilter = 'pt';
+  double _speechRate = 0.52;
+  double _pitch = 1.0;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _initVoices();
+  }
+
+  Future<void> _initVoices() async {
+    final prefs = await SharedPreferences.getInstance();
+    _hiddenVoiceNames = (prefs.getStringList('hell_tts_hidden_voices') ?? []).toSet();
+    _selectedVoiceName = prefs.getString('hell_tts_selected_voice');
+    _speechRate = prefs.getDouble('hell_tts_rate') ?? 0.52;
+    _pitch = prefs.getDouble('hell_tts_pitch') ?? 1.0;
+
+    try {
+      final rawVoices = await _tts.getVoices;
+      if (rawVoices is List) {
+        final parsed = <Map<String, String>>[];
+        for (final v in rawVoices) {
+          if (v is Map) {
+            final name = (v['name'] ?? '').toString();
+            final locale = (v['locale'] ?? '').toString();
+            if (name.isEmpty) continue;
+            final gender = _detectVoiceGender(name);
+            parsed.add({'name': name, 'locale': locale, 'gender': gender});
+          }
+        }
+        _allVoices = parsed;
+      }
+    } catch (_) {}
+
+    if (mounted) setState(() => _loading = false);
+  }
+
+  String _detectVoiceGender(String voiceName) {
+    final low = voiceName.toLowerCase();
+    if (low.contains('male') && !low.contains('female')) return 'male';
+    if (low.contains('female')) return 'female';
+    if (low.contains('jfb') || low.contains('ptm') || low.contains('iom') || low.contains('tpd') || low.contains('gba') || low.contains('duarte') || low.contains('daniel') || low.contains('ricardo') || low.contains('antonio')) {
+      return 'male';
+    }
+    if (low.contains('sfb') || low.contains('ptf') || low.contains('iof') || low.contains('tpc') || low.contains('ines') || low.contains('raquel') || low.contains('francisca') || low.contains('maria') || low.contains('vitoria') || low.contains('camila')) {
+      return 'female';
+    }
+    return low.hashCode.isEven ? 'female' : 'male';
+  }
+
+  String _friendlyVoiceTitle(Map<String, String> v) {
+    final name = v['name'] ?? '';
+    final locale = v['locale'] ?? '';
+    final gender = v['gender'] == 'male' ? 'Masculina' : 'Feminina';
+    final shortCode = name.split('-').last.toUpperCase();
+    return 'Google Voz $gender ($shortCode) · $locale';
+  }
+
+  Future<void> _selectAndTestVoice(Map<String, String> voice) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('hell_tts_selected_voice', voice['name']!);
+    await prefs.setString('hell_tts_selected_locale', voice['locale']!);
+    setState(() => _selectedVoiceName = voice['name']);
+
+    try {
+      await _tts.stop();
+      await _tts.setVoice({'name': voice['name']!, 'locale': voice['locale']!});
+      await _tts.setSpeechRate(_speechRate);
+      await _tts.setPitch(_pitch);
+      await _tts.speak('Olá! Esta é a minha voz no HELL Live para ler o chat da tua transmissão.');
+    } catch (_) {}
+  }
+
+  Future<void> _hideVoice(String name) async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() => _hiddenVoiceNames.add(name));
+    await prefs.setStringList('hell_tts_hidden_voices', _hiddenVoiceNames.toList());
+  }
+
+  Future<void> _restoreHiddenVoices() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() => _hiddenVoiceNames.clear());
+    await prefs.remove('hell_tts_hidden_voices');
+  }
+
+  Future<void> _openGoogleVoiceDownloadSettings() async {
+    if (Platform.isAndroid) {
+      try {
+        await launchUrl(Uri.parse('android.settings.TTS_SETTINGS'), mode: LaunchMode.externalApplication);
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Abre Definições do Android > Acessibilidade > Saída de texto para voz > Motor Google > Instalar dados de voz.')),
+          );
+        }
+      }
+    } else if (Platform.isWindows) {
+      try {
+        await Process.start('cmd', ['/c', 'start', 'ms-settings:speech']);
+      } catch (_) {}
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final visibleVoices = _allVoices.where((v) {
+      if (_hiddenVoiceNames.contains(v['name'])) return false;
+      if (_langFilter != 'all' && !(v['locale'] ?? '').toLowerCase().startsWith(_langFilter)) return false;
+      if (_genderFilter != 'all' && v['gender'] != _genderFilter) return false;
+      return true;
+    }).toList();
+
+    return ListView(
+      padding: const EdgeInsets.all(14),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [Color(0xFF0E1D47), Color(0xFF08112B)]),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFF1E429F)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Expanded(
+                    child: Text('🗣️ Repositório de Vozes Google TTS', style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8))),
+                  ),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF), padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
+                    onPressed: _openGoogleVoiceDownloadSettings,
+                    icon: const Icon(Icons.download_for_offline, size: 17, color: Colors.white),
+                    label: const Text('Baixar Novas Vozes', style: TextStyle(color: Colors.white, fontSize: 11.5)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  ChoiceChip(label: const Text('Todas'), selected: _genderFilter == 'all', selectedColor: const Color(0xFF1E78FF), onSelected: (_) => setState(() => _genderFilter = 'all')),
+                  ChoiceChip(label: const Text('👨 Masculinas'), selected: _genderFilter == 'male', selectedColor: const Color(0xFF1E78FF), onSelected: (_) => setState(() => _genderFilter = 'male')),
+                  ChoiceChip(label: const Text('👩 Femininas'), selected: _genderFilter == 'female', selectedColor: const Color(0xFF1E78FF), onSelected: (_) => setState(() => _genderFilter = 'female')),
+                  ChoiceChip(label: const Text('Português'), selected: _langFilter == 'pt', selectedColor: Colors.teal, onSelected: (_) => setState(() => _langFilter = 'pt')),
+                  ChoiceChip(label: const Text('Todos Idiomas'), selected: _langFilter == 'all', selectedColor: Colors.teal, onSelected: (_) => setState(() => _langFilter = 'all')),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  const Text('Velocidade:', style: TextStyle(fontSize: 12, color: Colors.white70)),
+                  Expanded(
+                    child: Slider(
+                      value: _speechRate,
+                      min: 0.2,
+                      max: 1.0,
+                      onChanged: (v) async {
+                        setState(() => _speechRate = v);
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.setDouble('hell_tts_rate', v);
+                      },
+                    ),
+                  ),
+                  const Text('Tom:', style: TextStyle(fontSize: 12, color: Colors.white70)),
+                  Expanded(
+                    child: Slider(
+                      value: _pitch,
+                      min: 0.5,
+                      max: 1.6,
+                      onChanged: (v) async {
+                        setState(() => _pitch = v);
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.setDouble('hell_tts_pitch', v);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              if (_hiddenVoiceNames.isNotEmpty)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: _restoreHiddenVoices,
+                    icon: const Icon(Icons.restore, size: 16),
+                    label: Text('Restaurar ${_hiddenVoiceNames.length} vozes excluídas', style: const TextStyle(fontSize: 11.5)),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        if (_loading)
+          const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()))
+        else if (visibleVoices.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: const Color(0xFF0B1636), borderRadius: BorderRadius.circular(14)),
+            child: Column(
+              children: [
+                const Text('Nenhuma voz encontrada para este filtro.', style: TextStyle(color: Colors.white70)),
+                const SizedBox(height: 8),
+                ElevatedButton(
+                  onPressed: () => setState(() {
+                    _langFilter = 'all';
+                    _genderFilter = 'all';
+                  }),
+                  child: const Text('Mostrar Todas as Vozes Instaladas'),
+                ),
+              ],
+            ),
+          )
+        else
+          ...visibleVoices.map((v) {
+            final isSelected = _selectedVoiceName == v['name'];
+            final isMale = v['gender'] == 'male';
+            return Card(
+              color: isSelected ? const Color(0xFF122E73) : const Color(0xFF0B1636),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: isSelected ? const Color(0xFF38BDF8) : Colors.white12, width: isSelected ? 1.6 : 1),
+              ),
+              child: ListTile(
+                dense: true,
+                leading: CircleAvatar(
+                  backgroundColor: isMale ? const Color(0xFF1E78FF) : Colors.pinkAccent,
+                  child: Icon(isMale ? Icons.man : Icons.woman, color: Colors.white),
+                ),
+                title: Text(_friendlyVoiceTitle(v), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                subtitle: Text('Modelo: ${v['name']}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: Colors.white54)),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.play_circle_fill, color: Colors.greenAccent, size: 26),
+                      tooltip: 'Ouvir e Selecionar Voz',
+                      onPressed: () => _selectAndTestVoice(v),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                      tooltip: 'Excluir Voz da Lista',
+                      onPressed: () => _hideVoice(v['name']!),
+                    ),
+                  ],
+                ),
+                onTap: () => _selectAndTestVoice(v),
+              ),
+            );
+          }),
+      ],
+    );
+  }
+}
