@@ -935,7 +935,35 @@ Widget _buildSelectedGoalOverlayGraphic(String overlayType, double pct, String t
                     ),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                      onPressed: () async {
+                                            onPressed: () async {
+                        setSimState(() => simulatedPct = 1.0);
+                        await _togglePlayAudio('https://google.com');
+                      },
+                      child: const Text('Simular 100% Concluído', style: TextStyle(color: Colors.white, fontSize: 12)),
+                    ),
+                    OutlinedButton(
+                      onPressed: () => setSimState(() => simulatedPct = 0.0),
+                      child: const Text('Zerar (0%)', style: TextStyle(fontSize: 12)),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  widget.sfxPlayer.stop();
+                  Navigator.pop(ctx);
+                },
+                child: const Text('Fechar Simulador'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   void _openGoalEditAndOverlayPicker(Map<String, dynamic> goal) {
     final titleCtrl = TextEditingController(text: goal['title']);
     final targetCtrl = TextEditingController(text: '${goal['target']}');
