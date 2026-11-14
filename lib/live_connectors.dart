@@ -471,5 +471,27 @@ class _ChatTtsRepositoryScreenState extends State<ChatTtsRepositoryScreen> {
                     tooltip: 'Ouvir Amostra',
                     onPressed: () => _previewVoice(v),
                   ),
-                  if (!isDownloaded)
+                                   if (!isDownloaded)
                     isDownloading
+                        ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2))
+                        : IconButton(
+                            icon: const Icon(Icons.download_rounded, color: Color(0xFF38BDF8), size: 24),
+                            tooltip: 'Transferir para a App',
+                            onPressed: () => _downloadVoiceToApp(v),
+                          )
+                  else
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 21),
+                      tooltip: 'Eliminar Voz da App',
+                      onPressed: () => _deleteVoiceFromApp(id),
+                    ),
+                ],
+              ),
+              onTap: () => _previewVoice(v),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+}
