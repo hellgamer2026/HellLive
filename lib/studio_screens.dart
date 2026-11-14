@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'app_data.dart';
+import 'live_connectors.dart';
 
 BoxDecoration _studioCardDeco() => BoxDecoration(
       gradient: const LinearGradient(colors: [Color(0xFF0E1D47), Color(0xFF08112B)]),
@@ -23,84 +24,108 @@ class OverlayStudioScreen extends StatefulWidget {
 }
 
 class _OverlayStudioScreenState extends State<OverlayStudioScreen> {
-  bool _isProMember = false;
+  String _localServerUrl = 'http://127.0.0.1:8765';
+  final TextEditingController _customGifCtrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _initLocalServer();
+  }
+
+  Future<void> _initLocalServer() async {
+    final url = await LocalObsServer.start();
+    if (mounted) setState(() => _localServerUrl = url);
+  }
 
   Widget _buildLiveOverlayPreview(String type, String title) {
     switch (type) {
       case 'bar':
         return Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(color: const Color(0xFF04091A), borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFF38BDF8).withOpacity(0.5))),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFF04091A),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: const Color(0xFF25F4EE), width: 1.5),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(title, style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Colors.white)),
-                  const Text('75%', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8))),
+                  Text(title, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
+                  const Text('750 / 1000', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF25F4EE))),
                 ],
               ),
               const SizedBox(height: 6),
               ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: const LinearProgressIndicator(value: 0.75, minHeight: 8, backgroundColor: Colors.white12, valueColor: AlwaysStoppedAnimation(Color(0xFF38BDF8))),
+                borderRadius: BorderRadius.circular(8),
+                child: const LinearProgressIndicator(value: 0.75, minHeight: 8, backgroundColor: Colors.white12, valueColor: AlwaysStoppedAnimation(Color(0xFF25F4EE))),
               ),
             ],
           ),
         );
       case 'timer':
         return Container(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-          decoration: BoxDecoration(color: const Color(0xFF04091A), borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.amberAccent.withOpacity(0.6))),
-          child: const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+          decoration: BoxDecoration(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white24),
+          ),
+          child: const Column(
             children: [
-              Text('⏱️ CONTAGEM ATIVA', style: TextStyle(fontSize: 10, color: Colors.amberAccent, fontWeight: FontWeight.bold)),
-              Text('00:29:45', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, letterSpacing: 1.5, color: Colors.white)),
+              Text('00:29:45', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: 2, color: Colors.white, shadows: [Shadow(color: Color(0xFF38BDF8), blurRadius: 12)])),
+              Text('Tu controlas o tempo!', style: TextStyle(fontSize: 11, color: Color(0xFF7DD3FC), fontWeight: FontWeight.bold)),
             ],
           ),
         );
       case 'wheel':
         return Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(color: const Color(0xFF04091A), borderRadius: BorderRadius.circular(10)),
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(color: const Color(0xFF04091A), borderRadius: BorderRadius.circular(12)),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 34,
-                height: 34,
-                decoration: const BoxDecoration(shape: BoxShape.circle, gradient: SweepGradient(colors: [Color(0xFF1E78FF), Color(0xFF38BDF8), Color(0xFFEC4899)])),
-                child: const Icon(Icons.refresh, size: 16, color: Colors.white),
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const SweepGradient(colors: [Color(0xFF1E78FF), Color(0xFF38BDF8), Color(0xFFEC4899), Color(0xFFFACC15)]),
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
+                child: const Icon(Icons.casino, size: 18, color: Colors.white),
               ),
               const SizedBox(width: 10),
-              const Text('Roleta Giratória Ao Vivo', style: TextStyle(fontSize: 11.5, color: Color(0xFF38BDF8), fontWeight: FontWeight.bold)),
+              const Text('Roleta 3D Interativa Ao Vivo', style: TextStyle(fontSize: 12, color: Color(0xFF38BDF8), fontWeight: FontWeight.bold)),
             ],
           ),
         );
       case 'podium':
         return Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(color: const Color(0xFF04091A), borderRadius: BorderRadius.circular(10)),
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(color: const Color(0xFF04091A), borderRadius: BorderRadius.circular(12)),
           child: const Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               Text('🥇 @TopApoiante · 5.000 💎', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFFACC15))),
-              Text('🔥 Streak x14', style: TextStyle(fontSize: 11, color: Colors.orangeAccent, fontWeight: FontWeight.bold)),
+              Text('🔥 Top Geral', style: TextStyle(fontSize: 11, color: Colors.orangeAccent, fontWeight: FontWeight.bold)),
             ],
           ),
         );
       default:
         return Container(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: const Color(0xFF04091A),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFF38BDF8), width: 1.5),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFF38BDF8), width: 1.8),
+            boxShadow: [BoxShadow(color: const Color(0xFF38BDF8).withOpacity(0.25), blurRadius: 10)],
           ),
           child: Center(
-            child: Text('✨ Pré-visualização HUD · $title', style: const TextStyle(fontSize: 11, color: Color(0xFF7DD3FC), fontWeight: FontWeight.w600)),
+            child: Text('✨ HUD 3D Transparente · $title', style: const TextStyle(fontSize: 11.5, color: Color(0xFF7DD3FC), fontWeight: FontWeight.bold)),
           ),
         );
     }
@@ -108,148 +133,92 @@ class _OverlayStudioScreenState extends State<OverlayStudioScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final cleanRoom = (widget.roomName.isEmpty ? 'teu_canal' : widget.roomName).toLowerCase().replaceAll('@', '');
-    final baseOverlayUrl = '${widget.serverUrl}/overlay/$cleanRoom';
+    final baseOverlayUrl = '$_localServerUrl/overlay';
 
-    return DefaultTabController(
-      length: 2,
-      child: Column(
-        children: [
-          const TabBar(
-            indicatorColor: Color(0xFF38BDF8),
-            labelColor: Color(0xFF38BDF8),
-            unselectedLabelColor: Colors.white54,
-            tabs: [
-              Tab(text: '🎨 Galeria com Pré-Visualização'),
-              Tab(text: '✨ Marketplace PRO'),
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: _studioCardDeco(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.sensors, color: Colors.greenAccent, size: 18),
+                  SizedBox(width: 8),
+                  Text('Servidor Local Browser Source Ativo (OBS / Live Studio)', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF38BDF8), fontSize: 13)),
+                ],
+              ),
+              const SizedBox(height: 6),
+              SelectableText(baseOverlayUrl, style: const TextStyle(fontSize: 12.5, color: Colors.cyanAccent, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF)),
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: baseOverlayUrl));
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Link Browser Source copiado para colar no OBS / TikTok Live Studio!')));
+                  },
+                  icon: const Icon(Icons.copy, size: 17, color: Colors.white),
+                  label: const Text('Copiar Link Principal (OBS / Studio)', style: TextStyle(color: Colors.white)),
+                ),
+              ),
+              const Divider(color: Colors.white12, height: 20),
+              const Text('Incorporar GIF Externo Personalizado no Overlay:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white70)),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _customGifCtrl,
+                      decoration: const InputDecoration(hintText: 'Colar URL direto do GIF (.gif)...', isDense: true, border: OutlineInputBorder()),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF122B6B)),
+                    onPressed: () {
+                      final url = _customGifCtrl.text.trim();
+                      if (url.isNotEmpty) {
+                        LocalObsServer.pushAlert('Overlay Personalizado', 'GIF Ativado na Live!', url);
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('GIF enviado para o ecrã da live!')));
+                      }
+                    },
+                    child: const Text('Disparar GIF', style: TextStyle(color: Colors.white, fontSize: 12)),
+                  ),
+                ],
+              ),
             ],
           ),
-          Expanded(
-            child: TabBarView(
-              children: [
-                ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: _studioCardDeco(),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+        ),
+        const SizedBox(height: 12),
+        ...DefaultMediaLibrary.tikfinityOverlayCategories.map((cat) {
+          final items = List<Map<String, dynamic>>.from(cat['items']);
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text(cat['category'], style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFF38BDF8))),
+              ),
+              ...items.map((ov) {
+                final widgetUrl = '$baseOverlayUrl?widget=${ov['scene']}';
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(12),
+                  decoration: _studioCardDeco(),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildLiveOverlayPreview(ov['previewType'] ?? 'frame', ov['name']!),
+                      const SizedBox(height: 8),
+                      Row(
                         children: [
-                          const Text('🔗 URL Geral Browser Source (OBS / Live Studio)', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF38BDF8), fontSize: 13)),
-                          const SizedBox(height: 4),
-                          SelectableText(baseOverlayUrl, style: const TextStyle(fontSize: 11.5, color: Colors.cyanAccent)),
-                          const SizedBox(height: 8),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF)),
-                              onPressed: () {
-                                Clipboard.setData(ClipboardData(text: baseOverlayUrl));
-                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('URL copiado!')));
-                              },
-                              icon: const Icon(Icons.copy, size: 17, color: Colors.white),
-                              label: const Text('Copiar Link Principal', style: TextStyle(color: Colors.white)),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    ...DefaultMediaLibrary.tikfinityOverlayCategories.map((cat) {
-                      final items = List<Map<String, String>>.from(cat['items']);
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            child: Text(cat['category'], style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFF38BDF8))),
-                          ),
-                          ...items.map((ov) {
-                            final widgetUrl = '$baseOverlayUrl?widget=${ov['scene']}';
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 10),
-                              padding: const EdgeInsets.all(12),
-                              decoration: _studioCardDeco(),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _buildLiveOverlayPreview(ov['previewType'] ?? 'frame', ov['name']!),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(ov['name']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
-                                            Text(ov['desc']!, style: const TextStyle(fontSize: 11, color: Colors.white60)),
-                                          ],
-                                        ),
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(Icons.copy, size: 18, color: Colors.white70),
-                                        onPressed: () {
-                                          Clipboard.setData(ClipboardData(text: widgetUrl));
-                                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Link "${ov['name']}" copiado!')));
-                                        },
-                                      ),
-                                      ElevatedButton(
-                                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF), padding: const EdgeInsets.symmetric(horizontal: 10)),
-                                        onPressed: () {
-                                          if (widget.roomName.isNotEmpty) {
-                                            widget.socket.emit('remote_command', {'room': cleanRoom, 'command': 'scene', 'payload': ov['scene']});
-                                          }
-                                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Overlay "${ov['name']}" ativado!')));
-                                        },
-                                        child: const Text('Ativar', style: TextStyle(color: Colors.white, fontSize: 11.5)),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            );
-                          }),
-                        ],
-                      );
-                    }),
-                  ],
-                ),
-                ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(18),
-                      decoration: _studioCardDeco(),
-                      child: Column(
-                        children: [
-                          Icon(Icons.workspace_premium, color: _isProMember ? Colors.greenAccent : const Color(0xFFF59E0B), size: 46),
-                          const SizedBox(height: 8),
-                          Text(_isProMember ? 'Conta Criador PRO Ativa' : 'Estúdio Criador & Loja PRO', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 6),
-                          const Text('Publica e vende os teus próprios Overlays e Packs no Marketplace HELL Live.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12.5, color: Colors.white70)),
-                          const SizedBox(height: 12),
-                          if (!_isProMember)
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF59E0B)),
-                              onPressed: () => setState(() => _isProMember = true),
-                              child: const Text('Ativar Plano PRO (4.99 €/mês)', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-
+                          Expanded(
+                            child: Column(
 class InteractionScreen extends StatefulWidget {
   final IO.Socket socket;
   final String roomName;
@@ -295,12 +264,15 @@ class _InteractionScreenState extends State<InteractionScreen> with SingleTicker
   @override
   void initState() {
     super.initState();
-    _wheelCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 3));
+    _wheelCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 4));
     widget.socket.on('live_event', (data) {
       if (!mounted || !_subathonRunning) return;
       if (data['type'] == 'gift') {
         final coins = (data['coins'] ?? 1) as int;
-        setState(() => _subathonSeconds += (coins * _secPerCoin));
+        setState(() {
+          _subathonSeconds += (coins * _secPerCoin);
+          LocalObsServer.latestTimer = {'seconds': _subathonSeconds, 'running': _subathonRunning};
+        });
       }
     });
   }
@@ -317,15 +289,27 @@ class _InteractionScreenState extends State<InteractionScreen> with SingleTicker
   void _toggleSubathon() {
     if (_subathonRunning) {
       _subathonTimer?.cancel();
-      setState(() => _subathonRunning = false);
+      setState(() {
+        _subathonRunning = false;
+        LocalObsServer.latestTimer = {'seconds': _subathonSeconds, 'running': false};
+      });
     } else {
-      setState(() => _subathonRunning = true);
+      setState(() {
+        _subathonRunning = true;
+        LocalObsServer.latestTimer = {'seconds': _subathonSeconds, 'running': true};
+      });
       _subathonTimer = Timer.periodic(const Duration(seconds: 1), (_) {
         if (_subathonSeconds > 0) {
-          setState(() => _subathonSeconds--);
+          setState(() {
+            _subathonSeconds--;
+            LocalObsServer.latestTimer = {'seconds': _subathonSeconds, 'running': true};
+          });
         } else {
           _subathonTimer?.cancel();
-          setState(() => _subathonRunning = false);
+          setState(() {
+            _subathonRunning = false;
+            LocalObsServer.latestTimer = {'seconds': 0, 'running': false};
+          });
         }
       });
     }
@@ -341,28 +325,47 @@ class _InteractionScreenState extends State<InteractionScreen> with SingleTicker
   void _spinWheel() {
     if (_options.isEmpty) return;
     final rnd = Random();
-    final end = _currentAngle + (4 + rnd.nextInt(4)) * 2 * pi + rnd.nextDouble() * 2 * pi;
-    final anim = Tween<double>(begin: _currentAngle, end: end).animate(CurvedAnimation(parent: _wheelCtrl, curve: Curves.easeOutCubic));
+    final end = _currentAngle + (5 + rnd.nextInt(4)) * 2 * pi + rnd.nextDouble() * 2 * pi;
+    final anim = Tween<double>(begin: _currentAngle, end: end).animate(CurvedAnimation(parent: _wheelCtrl, curve: Curves.easeOutQuart));
     anim.addListener(() => setState(() => _currentAngle = anim.value));
     _wheelCtrl.forward(from: 0).then((_) {
       final winner = _options[rnd.nextInt(_options.length)];
       setState(() => _lastWinner = '🎉 $winner');
-      final clean = widget.roomName.toLowerCase().replaceAll('@', '');
-      if (clean.isNotEmpty) {
-        widget.socket.emit('remote_command', {'room': clean, 'command': 'wheel', 'payload': _options});
-      }
+      LocalObsServer.pushAlert('Roleta 3D HELL Live', 'Resultado: $winner', 'https://jsdelivr.net');
     });
   }
 
   List<Color> _wheelColors() {
+    if (_wheelTheme == 'gold') return [const Color(0xFFFACC15), const Color(0xFFD97706), const Color(0xFFFEF08A), const Color(0xFFB45309)];
     if (_wheelTheme == 'fire') return [const Color(0xFFEF4444), const Color(0xFFF97316), const Color(0xFFFACC15), const Color(0xFFDC2626)];
     if (_wheelTheme == 'toxic') return [const Color(0xFF22C55E), const Color(0xFF10B981), const Color(0xFF84CC16), const Color(0xFF059669)];
     return [const Color(0xFF1E78FF), const Color(0xFF38BDF8), const Color(0xFF6366F1), const Color(0xFF0EA5E9)];
   }
   @override
   Widget build(BuildContext context) {
-    final cleanRoom = widget.roomName.toLowerCase().replaceAll('@', '');
     final medals = ['🥇', '🥈', '🥉'];
+    final timerUrl = 'http://${LocalObsServer.localIp}:${LocalObsServer.port}/overlay?widget=timer_hud';
+
+    final Map<String, Map<String, dynamic>> overallMap = {};
+    for (final g in widget.topGifts) {
+      final u = (g['user'] ?? '').toString();
+      if (u.isEmpty) continue;
+      overallMap[u] = {
+        'user': u,
+        'avatar': g['avatar'] ?? '',
+        'score': (overallMap[u]?['score'] ?? 0) + ((g['score'] ?? 0) as int) * 10,
+      };
+    }
+    for (final l in widget.topLikes) {
+      final u = (l['user'] ?? '').toString();
+      if (u.isEmpty) continue;
+      overallMap[u] = {
+        'user': u,
+        'avatar': l['avatar'] ?? (overallMap[u]?['avatar'] ?? ''),
+        'score': (overallMap[u]?['score'] ?? 0) + ((l['score'] ?? 0) as int),
+      };
+    }
+    final topOverall = overallMap.values.toList()..sort((a, b) => (b['score'] as int).compareTo(a['score'] as int));
 
     return DefaultTabController(
       length: 3,
@@ -374,26 +377,41 @@ class _InteractionScreenState extends State<InteractionScreen> with SingleTicker
             unselectedLabelColor: Colors.white54,
             tabs: [
               Tab(text: '⏱️ Temporizador'),
-              Tab(text: '🎡 Roleta & Votação'),
-              Tab(text: '🏆 Pódio Oficial'),
+              Tab(text: '🎡 Roleta 3D'),
+              Tab(text: '🏆 Pódio & Tops'),
             ],
           ),
           Expanded(
             child: TabBarView(
               children: [
+                // 1. CONTAGEM REGRESSIVA SEM FUNDO ("Tu controlas o tempo!")
                 ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
                     Container(
                       padding: const EdgeInsets.all(20),
-                      decoration: _studioCardDeco(),
+                      decoration: BoxDecoration(
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: const Color(0xFF38BDF8).withOpacity(0.5), width: 1.4),
+                      ),
                       child: Column(
                         children: [
-                          const Text('CONTAGEM REGRESSIVA INTERATIVA', style: TextStyle(fontSize: 11, letterSpacing: 2, color: Color(0xFF38BDF8), fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 6),
-                          const Text('Os presentes dos espectadores aumentam o relógio automaticamente!', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Colors.white60)),
-                          const SizedBox(height: 16),
-                          Text(_formatDuration(_subathonSeconds), style: const TextStyle(fontSize: 44, fontWeight: FontWeight.w900, letterSpacing: 3, color: Colors.white)),
+                          Text(
+                            _formatDuration(_subathonSeconds),
+                            style: const TextStyle(
+                              fontSize: 48,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 3,
+                              color: Colors.white,
+                              shadows: [Shadow(color: Color(0xFF38BDF8), blurRadius: 18)],
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Tu controlas o tempo!',
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: 1.5, color: Color(0xFF7DD3FC)),
+                          ),
                           const SizedBox(height: 16),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -402,25 +420,31 @@ class _InteractionScreenState extends State<InteractionScreen> with SingleTicker
                                 style: ElevatedButton.styleFrom(backgroundColor: _subathonRunning ? Colors.amber : Colors.green),
                                 onPressed: _toggleSubathon,
                                 icon: Icon(_subathonRunning ? Icons.pause : Icons.play_arrow, color: Colors.black),
-                                label: Text(_subathonRunning ? 'Pausar' : 'Iniciar Relógio', style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                                label: Text(_subathonRunning ? 'Pausar' : 'Iniciar', style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
                               ),
-                              const SizedBox(width: 10),
+                              const SizedBox(width: 8),
                               OutlinedButton(
-                                onPressed: () => setState(() => _subathonSeconds += 300),
+                                onPressed: () => setState(() {
+                                  _subathonSeconds += 300;
+                                  LocalObsServer.latestTimer = {'seconds': _subathonSeconds, 'running': _subathonRunning};
+                                }),
                                 child: const Text('+5 Min'),
                               ),
                               const SizedBox(width: 8),
                               OutlinedButton(
-                                onPressed: () => setState(() => _subathonSeconds = 1800),
-                                child: const Text('Reset'),
+                                onPressed: () => setState(() {
+                                  _subathonSeconds = 1800;
+                                  LocalObsServer.latestTimer = {'seconds': _subathonSeconds, 'running': _subathonRunning};
+                                }),
+                                child: const Text('Repor'),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 12),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text('Tempo ganho por cada moeda:', style: TextStyle(fontSize: 12.5)),
+                              const Text('Tempo ganho por moeda:', style: TextStyle(fontSize: 12.5)),
                               DropdownButton<int>(
                                 value: _secPerCoin,
                                 dropdownColor: const Color(0xFF0B1636),
@@ -434,11 +458,25 @@ class _InteractionScreenState extends State<InteractionScreen> with SingleTicker
                               ),
                             ],
                           ),
+                          const Divider(color: Colors.white12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF)),
+                              onPressed: () {
+                                Clipboard.setData(ClipboardData(text: timerUrl));
+                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Link Transparente do Temporizador copiado para OBS / Studio!')));
+                              },
+                              icon: const Icon(Icons.copy, size: 16, color: Colors.white),
+                              label: const Text('Copiar Link Sem Fundo (OBS / Studio)', style: TextStyle(color: Colors.white, fontSize: 12)),
+                            ),
+                          ),
                         ],
                       ),
                     ),
                   ],
                 ),
+                // 2. ROLETA 3D MULTI-ESTILO PERSONALIZÁVEL
                 ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
@@ -450,159 +488,43 @@ class _InteractionScreenState extends State<InteractionScreen> with SingleTicker
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text('🎡 Roleta Interativa', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF38BDF8), fontSize: 15)),
+                              const Text('🎡 Roleta 3D Personalizável', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF38BDF8), fontSize: 15)),
                               DropdownButton<String>(
                                 value: _wheelTheme,
                                 dropdownColor: const Color(0xFF0B1636),
                                 items: const [
-                                  DropdownMenuItem(value: 'neon', child: Text('Néon')),
-                                  DropdownMenuItem(value: 'fire', child: Text('Fogo')),
-                                  DropdownMenuItem(value: 'toxic', child: Text('Tóxico')),
+                                  DropdownMenuItem(value: 'neon', child: Text('Néon Cyber')),
+                                  DropdownMenuItem(value: 'gold', child: Text('Ouro VIP')),
+                                  DropdownMenuItem(value: 'fire', child: Text('Fogo Épico')),
+                                  DropdownMenuItem(value: 'toxic', child: Text('Esmeralda PRO')),
                                 ],
                                 onChanged: (v) => setState(() => _wheelTheme = v ?? 'neon'),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 10),
+                          const Icon(Icons.arrow_drop_down, size: 36, color: Colors.amberAccent),
                           Stack(
                             alignment: Alignment.center,
                             children: [
                               Transform.rotate(
                                 angle: _currentAngle,
                                 child: Container(
-                                  width: 150,
-                                  height: 150,
-                                  decoration: BoxDecoration(shape: BoxShape.circle, gradient: SweepGradient(colors: _wheelColors()), border: Border.all(color: Colors.white, width: 3)),
+                                  width: 175,
+                                  height: 175,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    boxShadow: [BoxShadow(color: _wheelColors().first.withOpacity(0.5), blurRadius: 22)],
+                                    border: Border.all(color: Colors.white, width: 4),
+                                  ),
+                                  child: CustomPaint(
+                                    painter: _Wheel3DPainter(options: _options, colors: _wheelColors()),
+                                  ),
                                 ),
                               ),
                               Container(
-                                width: 56,
-                                height: 56,
+                                width: 52,
+                                height: 52,
                                 padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(color: const Color(0xFF050B1E), shape: BoxShape.circle, border: Border.all(color: const Color(0xFF38BDF8), width: 2)),
-                                child: Image.asset('icon.png', fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.local_fire_department, color: Color(0xFF38BDF8))),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          Text(_lastWinner, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8))),
-                          const SizedBox(height: 8),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF)),
-                              onPressed: _spinWheel,
-                              icon: const Icon(Icons.refresh, color: Colors.white),
-                              label: const Text('GIRAR ROLETA', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                            ),
-                          ),
-                          Row(
-                            children: [
-                              Expanded(child: TextField(controller: _optionCtrl, decoration: const InputDecoration(hintText: 'Adicionar opção...', isDense: true))),
-                              IconButton(
-                                icon: const Icon(Icons.add_circle, color: Color(0xFF38BDF8)),
-                                onPressed: () {
-                                  if (_optionCtrl.text.trim().isNotEmpty) {
-                                    setState(() {
-                                      _options.add(_optionCtrl.text.trim());
-                                      _optionCtrl.clear();
-                                    });
-                                  }
-                                },
-                              ),
-                            ],
-                          ),
-                          Wrap(
-                            spacing: 6,
-                            children: _options.map((o) => Chip(label: Text(o, style: const TextStyle(fontSize: 11)), onDeleted: () => setState(() => _options.remove(o)))).toList(),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: _studioCardDeco(),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('📊 Votação Ao Vivo (!sim / !nao)', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF38BDF8))),
-                              Switch(
-                                activeColor: Colors.white,
-                                activeTrackColor: const Color(0xFF1E78FF),
-                                value: _pollActive,
-                                onChanged: (v) {
-                                  setState(() => _pollActive = v);
-                                  if (cleanRoom.isNotEmpty) {
-                                    widget.socket.emit('update_poll', {
-                                      'room': cleanRoom,
-                                      'poll': {'active': v, 'question': _pollQuestionCtrl.text.trim(), 'opt1Label': 'SIM (!sim)', 'opt2Label': 'NÃO (!nao)', 'opt1Key': '!sim', 'opt2Key': '!nao'}
-                                    });
-                                  }
-                                },
-                              ),
-                            ],
-                          ),
-                          TextField(controller: _pollQuestionCtrl, decoration: const InputDecoration(labelText: 'Pergunta para o Chat')),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: _studioCardDeco(),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('💎 TOP PRESENTES DA LIVE', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF38BDF8))),
-                          const SizedBox(height: 10),
-                          if (widget.topGifts.isEmpty)
-                            const Text('Ainda sem presentes registados nesta sessão.', style: TextStyle(color: Colors.white54))
-                          else
-                            ...widget.topGifts.take(5).toList().asMap().entries.map((e) => ListTile(
-                                  contentPadding: EdgeInsets.zero,
-                                  leading: Text(e.key < 3 ? medals[e.key] : '#${e.key + 1}', style: const TextStyle(fontSize: 20)),
-                                  title: Text(e.value['user'] ?? ''),
-                                  trailing: Text('${e.value['score']} moedas', style: const TextStyle(color: Color(0xFF38BDF8), fontWeight: FontWeight.bold)),
-                                )),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: _studioCardDeco(),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('❤️ TOP LIKES DA LIVE', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFF43F5E))),
-                          const SizedBox(height: 10),
-                          if (widget.topLikes.isEmpty)
-                            const Text('Ainda sem likes registados nesta sessão.', style: TextStyle(color: Colors.white54))
-                          else
-                            ...widget.topLikes.take(5).toList().asMap().entries.map((e) => ListTile(
-                                  contentPadding: EdgeInsets.zero,
-                                  leading: Text(e.key < 3 ? medals[e.key] : '#${e.key + 1}', style: const TextStyle(fontSize: 20)),
-                                  title: Text(e.value['user'] ?? ''),
-                                  trailing: Text('${e.value['score']} likes', style: const TextStyle(color: Color(0xFFF43F5E), fontWeight: FontWeight.bold)),
-                                )),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF050B1E),
