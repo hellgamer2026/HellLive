@@ -1,13 +1,10 @@
-import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:file_picker/file_picker.dart';
-import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
-import 'live_connectors.dart';
 
 class StreamDeckScreen extends StatefulWidget {
   final IO.Socket socket;
@@ -43,7 +40,7 @@ class _StreamDeckScreenState extends State<StreamDeckScreen> {
   int _cols = 4;
   int _rows = 2;
   String _selectedSoftware = 'OBS Studio';
-  String _deckWallpaper = 'h_icon'; // 'h_icon' ou 'hell_live'
+  String _deckWallpaper = 'h_icon';
 
   final Map<String, IconData> _iconCatalog = {
     'mute': Icons.volume_off_rounded,
@@ -128,10 +125,7 @@ class _StreamDeckScreenState extends State<StreamDeckScreen> {
               children: [
                 Text('Personalizar Tecla #${index + 1} ($_selectedSoftware)', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8))),
                 const SizedBox(height: 12),
-                TextField(
-                  controller: labelCtrl,
-                  decoration: const InputDecoration(labelText: 'Nome da Tecla', border: OutlineInputBorder(), isDense: true),
-                ),
+                TextField(controller: labelCtrl, decoration: const InputDecoration(labelText: 'Nome da Tecla', border: OutlineInputBorder(), isDense: true)),
                 const SizedBox(height: 12),
                 const Text('Tarefa Real a Executar:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white70)),
                 const SizedBox(height: 6),
@@ -140,9 +134,7 @@ class _StreamDeckScreenState extends State<StreamDeckScreen> {
                   dropdownColor: const Color(0xFF0B1636),
                   isExpanded: true,
                   decoration: const InputDecoration(border: OutlineInputBorder(), isDense: true),
-                  items: _realTasksCatalog.entries
-                      .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value, style: const TextStyle(fontSize: 12.5))))
-                      .toList(),
+                  items: _realTasksCatalog.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value, style: const TextStyle(fontSize: 12.5)))).toList(),
                   onChanged: (v) => setModalState(() => selectedTask = v ?? 'obs_scene_live'),
                 ),
                 const SizedBox(height: 12),
@@ -243,9 +235,7 @@ class _StreamDeckScreenState extends State<StreamDeckScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           duration: const Duration(milliseconds: 900),
-          content: Text(isOfflinePreview
-              ? '👁️ Pré-visualização Offline: ${b['label']} ($_selectedSoftware)'
-              : '⚡ Executado em $_selectedSoftware: ${b['label']}'),
+          content: Text(isOfflinePreview ? '👁️ Pré-visualização Offline: ${b['label']} ($_selectedSoftware)' : '⚡ Executado em $_selectedSoftware: ${b['label']}'),
         ),
       );
     }
@@ -263,17 +253,10 @@ class _StreamDeckScreenState extends State<StreamDeckScreen> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Colors.white.withOpacity(0.14),
-            accent.withOpacity(0.16),
-            const Color(0xFF050B1E).withOpacity(0.75),
-          ],
+          colors: [Colors.white.withOpacity(0.14), accent.withOpacity(0.16), const Color(0xFF050B1E).withOpacity(0.75)],
         ),
         border: Border.all(color: accent.withOpacity(0.65), width: 1.6),
-        boxShadow: [
-          BoxShadow(color: accent.withOpacity(0.25), blurRadius: 12, offset: const Offset(0, 4)),
-          BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 6, offset: const Offset(0, 2)),
-        ],
+        boxShadow: [BoxShadow(color: accent.withOpacity(0.25), blurRadius: 12, offset: const Offset(0, 4))],
       ),
       child: Stack(
         children: [
@@ -283,9 +266,7 @@ class _StreamDeckScreenState extends State<StreamDeckScreen> {
             right: 10,
             child: Container(
               height: 1.5,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [Colors.transparent, Colors.white.withOpacity(0.55), Colors.transparent]),
-              ),
+              decoration: BoxDecoration(gradient: LinearGradient(colors: [Colors.transparent, Colors.white.withOpacity(0.55), Colors.transparent])),
             ),
           ),
           Center(
@@ -314,11 +295,152 @@ class _StreamDeckScreenState extends State<StreamDeckScreen> {
       ),
     );
   }
-
   @override
   Widget build(BuildContext context) {
     final totalButtons = _cols * _rows;
     final visibleButtons = _buttons.take(totalButtons).toList();
+    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF030612),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(color: const Color(0xFF090F22), border: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.08)))),
+              child: Row(
+                children: [
+                  IconButton(icon: const Icon(Icons.arrow_back_ios_new, size: 18, color: Color(0xFF38BDF8)), onPressed: widget.onMinimizeDeck),
+                  const Text('STREAM DECK PRO', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.2, fontSize: 12.5)),
+                  const Spacer(),
+                  DropdownButton<String>(
+                    value: _deckWallpaper,
+                    dropdownColor: const Color(0xFF0B1636),
+                    underline: const SizedBox(),
+                    style: const TextStyle(fontSize: 11, color: Colors.cyanAccent, fontWeight: FontWeight.bold),
+                    items: const [
+                      DropdownMenuItem(value: 'h_icon', child: Text('Fundo: Ícone H')),
+                      DropdownMenuItem(value: 'hell_live', child: Text('Fundo: HELL Live')),
+                    ],
+                    onChanged: (v) => setState(() => _deckWallpaper = v ?? 'h_icon'),
+                  ),
+                  const SizedBox(width: 6),
+                  DropdownButton<String>(
+                    value: _selectedSoftware,
+                    dropdownColor: const Color(0xFF0B1636),
+                    underline: const SizedBox(),
+                    style: const TextStyle(fontSize: 11, color: Color(0xFF38BDF8), fontWeight: FontWeight.bold),
+                    items: const [
+                      DropdownMenuItem(value: 'OBS Studio', child: Text('OBS')),
+                      DropdownMenuItem(value: 'Streamlabs', child: Text('Streamlabs')),
+                      DropdownMenuItem(value: 'TikTok Live Studio', child: Text('TikTok')),
+                    ],
+                    onChanged: (v) => setState(() => _selectedSoftware = v ?? 'OBS Studio'),
+                  ),
+                  const SizedBox(width: 6),
+                  DropdownButton<String>(
+                    value: '${_cols}x$_rows',
+                    dropdownColor: const Color(0xFF0B1636),
+                    underline: const SizedBox(),
+                    style: const TextStyle(fontSize: 11, color: Colors.white70, fontWeight: FontWeight.bold),
+                    items: const [
+                      DropdownMenuItem(value: '4x2', child: Text('4×2')),
+                      DropdownMenuItem(value: '4x3', child: Text('4×3')),
+                      DropdownMenuItem(value: '4x4', child: Text('4×4')),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) {
+                        final parts = v.split('x');
+                        setState(() {
+                          _cols = int.parse(parts.first);
+                          _rows = int.parse(parts.last);
+                        });
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  IgnorePointer(
+                    child: Opacity(
+                      opacity: 0.14,
+                      child: _deckWallpaper == 'h_icon'
+                          ? Image.asset('icon.png', width: 250, height: 250, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.local_fire_department, size: 220, color: Color(0xFF38BDF8)))
+                          : const Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text('HELL', style: TextStyle(fontSize: 72, fontWeight: FontWeight.w900, letterSpacing: 8, color: Colors.white)),
+                                Text('LIVE', style: TextStyle(fontSize: 48, fontWeight: FontWeight.w900, letterSpacing: 12, color: Color(0xFF38BDF8))),
+                              ],
+                            ),
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: isLandscape ? 20 : 12, vertical: 10),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        const spacing = 10.0;
+                        final tileW = (constraints.maxWidth - (spacing * (_cols - 1))) / _cols;
+                        final tileH = (constraints.maxHeight - (spacing * (_rows - 1))) / _rows;
+
+                        return GridView.builder(
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: visibleButtons.length,
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: _cols,
+                            crossAxisSpacing: spacing,
+                            mainAxisSpacing: spacing,
+                            childAspectRatio: tileW / tileH,
+                          ),
+                          itemBuilder: (ctx, index) {
+                            final b = visibleButtons[index];
+                            return DragTarget<int>(
+                              onAcceptWithDetails: (details) {
+                                final fromIdx = details.data;
+                                if (fromIdx != index) {
+                                  setState(() {
+                                    final temp = _buttons[fromIdx];
+                                    _buttons[fromIdx] = _buttons[index];
+                                    _buttons[index] = temp;
+                                  });
+                                }
+                              },
+                              builder: (context, candidateData, rejectedData) {
+                                return Draggable<int>(
+                                  data: index,
+                                  feedback: Material(
+                                    color: Colors.transparent,
+                                    child: SizedBox(width: tileW, height: tileH, child: _buildSingleGlassDeckKey(index, b)),
+                                  ),
+                                  childWhenDragging: Opacity(opacity: 0.3, child: _buildSingleGlassDeckKey(index, b)),
+                                  child: GestureDetector(
+                                    onTap: () => _executeKeyAction(b),
+                                    onDoubleTap: () => _executeKeyAction(b, isOfflinePreview: true),
+                                    onLongPress: () => _editKeyModal(index),
+                                    child: _buildSingleGlassDeckKey(index, b),
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 class CommunityGlobeScreen extends StatefulWidget {
   final String serverUrl;
   const CommunityGlobeScreen({super.key, required this.serverUrl});
@@ -430,7 +552,6 @@ class _NasaEarth3DGlobePainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2;
 
-    // 1. Campo Estrelar NASA no Fundo
     final starPaint = Paint()..color = Colors.white.withOpacity(0.65);
     for (int i = 0; i < 28; i++) {
       final sx = ((i * 73) % size.width.toInt()).toDouble();
@@ -438,19 +559,13 @@ class _NasaEarth3DGlobePainter extends CustomPainter {
       canvas.drawCircle(Offset(sx, sy), (i % 2 == 0) ? 1.3 : 0.8, starPaint);
     }
 
-    // 2. Halo Atmosférico Terrestre (Rayleigh Scattering Azul NASA)
     final atmoGlow = Paint()
       ..shader = RadialGradient(
-        colors: [
-          const Color(0xFF60A5FA).withOpacity(0.55),
-          const Color(0xFF2563EB).withOpacity(0.22),
-          Colors.transparent,
-        ],
+        colors: [const Color(0xFF60A5FA).withOpacity(0.55), const Color(0xFF2563EB).withOpacity(0.22), Colors.transparent],
         stops: const [0.78, 0.92, 1.0],
       ).createShader(Rect.fromCircle(center: center, radius: radius * 1.18));
     canvas.drawCircle(center, radius * 1.18, atmoGlow);
 
-    // 3. Oceanos Profundos 3D com Iluminação Solar
     final oceanPaint = Paint()
       ..shader = const RadialGradient(
         center: Alignment(-0.45, -0.45),
@@ -463,7 +578,6 @@ class _NasaEarth3DGlobePainter extends CustomPainter {
     canvas.save();
     canvas.clipPath(Path()..addOval(Rect.fromCircle(center: center, radius: radius)));
 
-    // 4. Continentes Terrestres Realistas (Verde Floresta + Relevo Ocre/Deserto)
     final landFill = Paint()
       ..shader = const LinearGradient(
         begin: Alignment.topCenter,
@@ -480,17 +594,11 @@ class _NasaEarth3DGlobePainter extends CustomPainter {
     for (int rep = -1; rep <= 1; rep++) {
       final ox = center.dx - radius + shift + (rep * mapWidth);
       final continents = [
-        // América do Norte
         Path()..moveTo(ox + radius * 0.12, center.dy - radius * 0.56)..lineTo(ox + radius * 0.52, center.dy - radius * 0.60)..lineTo(ox + radius * 0.42, center.dy - radius * 0.18)..lineTo(ox + radius * 0.25, center.dy - radius * 0.14)..close(),
-        // América do Sul
         Path()..moveTo(ox + radius * 0.36, center.dy - radius * 0.04)..lineTo(ox + radius * 0.56, center.dy + radius * 0.10)..lineTo(ox + radius * 0.45, center.dy + radius * 0.62)..lineTo(ox + radius * 0.34, center.dy + radius * 0.35)..close(),
-        // Europa
         Path()..moveTo(ox + radius * 0.86, center.dy - radius * 0.54)..lineTo(ox + radius * 1.22, center.dy - radius * 0.58)..lineTo(ox + radius * 1.18, center.dy - radius * 0.26)..lineTo(ox + radius * 0.85, center.dy - radius * 0.24)..close(),
-        // África
         Path()..moveTo(ox + radius * 0.86, center.dy - radius * 0.18)..lineTo(ox + radius * 1.20, center.dy - radius * 0.12)..lineTo(ox + radius * 1.10, center.dy + radius * 0.52)..lineTo(ox + radius * 0.92, center.dy + radius * 0.32)..close(),
-        // Ásia
         Path()..moveTo(ox + radius * 1.24, center.dy - radius * 0.56)..lineTo(ox + radius * 1.88, center.dy - radius * 0.48)..lineTo(ox + radius * 1.80, center.dy + radius * 0.06)..lineTo(ox + radius * 1.26, center.dy - radius * 0.04)..close(),
-        // Oceânia
         Path()..moveTo(ox + radius * 1.56, center.dy + radius * 0.20)..lineTo(ox + radius * 1.84, center.dy + radius * 0.22)..lineTo(ox + radius * 1.78, center.dy + radius * 0.48)..lineTo(ox + radius * 1.52, center.dy + radius * 0.42)..close(),
       ];
       for (final p in continents) {
@@ -499,7 +607,6 @@ class _NasaEarth3DGlobePainter extends CustomPainter {
       }
     }
 
-    // 5. Camada de Nuvens Orbitais Translúcidas
     final cloudPaint = Paint()
       ..color = Colors.white.withOpacity(0.18)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
@@ -509,7 +616,6 @@ class _NasaEarth3DGlobePainter extends CustomPainter {
       canvas.drawOval(Rect.fromCenter(center: Offset(cx, cy), width: 68, height: 14), cloudPaint);
     }
 
-    // 6. Sombra Noturna Realista 3D (Terminador Solar)
     final nightShadow = Paint()
       ..shader = RadialGradient(
         center: const Alignment(-0.38, -0.38),
@@ -519,10 +625,23 @@ class _NasaEarth3DGlobePainter extends CustomPainter {
       ).createShader(Rect.fromCircle(center: center, radius: radius));
     canvas.drawCircle(center, radius, nightShadow);
 
-    // 7. Faróis Luminosos das Lives Ativas
     final pulse = 0.65 + 0.35 * sin(rotation * 4);
     final liveCore = Paint()..color = const Color(0xFFFACC15);
     final liveHalo = Paint()..color = const Color(0xFF38BDF8).withOpacity(0.55 * pulse);
+    for (int i = 0; i < 6; i++) {
+      final pt = Offset(center.dx + cos(rotation + i) * (45 + i * 6), center.dy + sin(rotation * 1.2 + i) * (35 + i * 5));
+      canvas.drawCircle(pt, 7 * pulse, liveHalo);
+      canvas.drawCircle(pt, 2.8, liveCore);
+    }
+    canvas.restore();
+
+    final rim = Paint()..color = const Color(0xFF7DD3FC).withOpacity(0.85)..style = PaintingStyle.stroke..strokeWidth = 2.0;
+    canvas.drawCircle(center, radius, rim);
+  }
+
+  @override
+  bool shouldRepaint(covariant _NasaEarth3DGlobePainter oldDelegate) => true;
+}
 class MarketplaceState {
   static final List<Map<String, dynamic>> items = [
     {
@@ -607,7 +726,6 @@ class _MarketplacePublicScreenState extends State<MarketplacePublicScreen> {
         const SizedBox(height: 12),
         ...visible.map((item) {
           final double net = (item['netPrice'] as num).toDouble();
-          // O criador define o valor líquido e o consumidor paga o preço final com +30% de margem da plataforma
           final double consumerPrice = net == 0.0 ? 0.0 : (net * 1.30);
           final bool owned = item['owned'] == true;
 
@@ -745,3 +863,5 @@ class _CreatorStudioProScreenState extends State<CreatorStudioProScreen> {
                 const SizedBox(height: 10),
                 TextField(controller: _titleCtrl, decoration: const InputDecoration(labelText: 'Título do Pack / Overlay', isDense: true)),
                 const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  value: _category,
