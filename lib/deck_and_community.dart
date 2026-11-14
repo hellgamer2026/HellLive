@@ -863,5 +863,78 @@ class _CreatorStudioProScreenState extends State<CreatorStudioProScreen> {
                 const SizedBox(height: 10),
                 TextField(controller: _titleCtrl, decoration: const InputDecoration(labelText: 'Título do Pack / Overlay', isDense: true)),
                 const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
+                               DropdownButtonFormField<String>(
                   value: _category,
+                  decoration: const InputDecoration(labelText: 'Categoria', isDense: true),
+                  items: const [
+                    DropdownMenuItem(value: 'Overlays 3D', child: Text('Overlays 3D')),
+                    DropdownMenuItem(value: 'Banners Perfil', child: Text('Banners de Perfil (Estático / GIF)')),
+                    DropdownMenuItem(value: 'Sons & GIFs', child: Text('Packs de Sons & GIFs')),
+                  ],
+                  onChanged: (v) => setState(() => _category = v ?? 'Overlays 3D'),
+                ),
+                const SizedBox(height: 8),
+                TextField(controller: _descCtrl, maxLines: 2, decoration: const InputDecoration(labelText: 'Descrição detalhada', isDense: true)),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _netPriceCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  onChanged: (_) => setState(() {}),
+                  decoration: const InputDecoration(labelText: 'O Teu Valor Líquido a Receber (€) — 0 para Grátis', isDense: true),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(color: const Color(0xFF050B1E), borderRadius: BorderRadius.circular(10)),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Recebes líquido: ${netVal.toStringAsFixed(2)} €', style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 12)),
+                      Text('Preço final comprador (+30%): ${finalConsumerPrice.toStringAsFixed(2)} €', style: const TextStyle(color: Color(0xFF38BDF8), fontWeight: FontWeight.bold, fontSize: 12)),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final res = await FilePicker.platform.pickFiles();
+                    if (res != null) {
+                      setState(() => _attachedFileName = res.files.single.name);
+                    }
+                  },
+                  icon: const Icon(Icons.upload_file),
+                  label: Text(_attachedFileName ?? 'Anexar Ficheiros do Pack (PNG, GIF, MP3, ZIP)'),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF), padding: const EdgeInsets.symmetric(vertical: 13)),
+                    onPressed: () {
+                      if (_titleCtrl.text.trim().isEmpty) return;
+                      MarketplaceState.items.insert(0, {
+                        'id': 'mp_${DateTime.now().millisecondsSinceEpoch}',
+                        'title': _titleCtrl.text.trim(),
+                        'creator': '@${widget.creatorName}',
+                        'category': _category,
+                        'netPrice': netVal,
+                        'desc': _descCtrl.text.trim().isEmpty ? 'Criação exclusiva Estúdio PRO HELL Live.' : _descCtrl.text.trim(),
+                        'owned': true,
+                      });
+                      _titleCtrl.clear();
+                      _descCtrl.clear();
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('🚀 Publicado no Market Place HELL Live com sucesso!'), backgroundColor: Colors.green));
+                    },
+                    icon: const Icon(Icons.publish, color: Colors.white),
+                    label: const Text('Publicar Agora no Market Place', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
