@@ -298,6 +298,41 @@ class _DonationHubScreenState extends State<DonationHubScreen> {
               const SizedBox(height: 8),
               TextField(controller: _revolutCtrl, decoration: const InputDecoration(labelText: 'Link Revolut.me / Cartão', prefixIcon: Icon(Icons.credit_card), isDense: true)),
               const SizedBox(height: 8),
+               TextField(controller: _pixCtrl, decoration: const InputDecoration(labelText: 'Chave PIX (Opcional)', prefixIcon: Icon(Icons.qr_code), isDense: true)),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(color: const Color(0xFF050B1E), borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.white12)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('🛡️ Acesso Rápido Seguro para Seguidores (Sem violações na Live):', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Colors.greenAccent)),
+                    const SizedBox(height: 4),
+                    const Text('Coloca este link na Bio do teu perfil e fixa no chat para os espectadores apoiarem em 1 clique:', style: TextStyle(fontSize: 11, color: Colors.white70)),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Expanded(child: Text(safeDonationLink, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF38BDF8), fontSize: 12))),
+                        IconButton(
+                          icon: const Icon(Icons.copy, size: 18, color: Colors.white),
+                          onPressed: () {
+                            Clipboard.setData(ClipboardData(text: safeDonationLink));
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Link seguro de apoio copiado!')));
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class MusicDeckController {
   static AudioPlayer? sharedPlayer;
   static bool isPlaying = false;
