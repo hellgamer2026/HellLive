@@ -252,11 +252,11 @@ class _MainShellState extends State<MainShell> {
   bool _allGiftsEnabled = true;
   int _sessionLikesCount = 0;
 
-  final List<Map<String, dynamic>> _alertsList = [
-    {'id': 'a1', 'trigger': 'follow', 'name': 'Novo Seguidor', 'enabled': true, 'ttsThank': true, 'customVoicePath': null, 'media': DefaultMediaLibrary.builtInGifsAndPngs['url']!, 'sound': ''},
-    {'id': 'a2', 'trigger': 'like500', 'name': 'Meta 500 Gostos (Gatilho)', 'enabled': true, 'ttsThank': true, 'customVoicePath': null, 'media': DefaultMediaLibrary.builtInGifsAndPngs['url']!, 'sound': ''},
-    {'id': 'a3', 'trigger': 'sub', 'name': 'Novo Subscritor', 'enabled': true, 'ttsThank': true, 'customVoicePath': null, 'media': DefaultMediaLibrary.builtInGifsAndPngs['url']!, 'sound': ''},
-    {'id': 'a4', 'trigger': 'share', 'name': 'Partilha da Live', 'enabled': true, 'ttsThank': true, 'customVoicePath': null, 'media': DefaultMediaLibrary.builtInGifsAndPngs['url']!, 'sound': ''},
+   final List<Map<String, dynamic>> _alertsList = [
+    {'id': 'a1', 'trigger': 'follow', 'name': 'Novo Seguidor', 'enabled': true, 'ttsThank': true, 'customVoicePath': null, 'media': DefaultMediaLibrary.builtInGifsAndPngs[0]['url']!, 'sound': ''},
+    {'id': 'a2', 'trigger': 'like500', 'name': 'Meta de Gostos da Live', 'enabled': true, 'ttsThank': true, 'customVoicePath': null, 'media': DefaultMediaLibrary.builtInGifsAndPngs[1]['url']!, 'sound': ''},
+    {'id': 'a3', 'trigger': 'sub', 'name': 'Novo Subscritor', 'enabled': true, 'ttsThank': true, 'customVoicePath': null, 'media': DefaultMediaLibrary.builtInGifsAndPngs[2]['url']!, 'sound': ''},
+    {'id': 'a4', 'trigger': 'share', 'name': 'Partilha da Live', 'enabled': true, 'ttsThank': true, 'customVoicePath': null, 'media': DefaultMediaLibrary.builtInGifsAndPngs[3]['url']!, 'sound': ''},
   ];
 
   final List<Map<String, dynamic>> _goalsList = [
@@ -788,9 +788,10 @@ class _MainShellState extends State<MainShell> {
                 } else if (cmd == 'tts_read_last' && _chatFeed.isNotEmpty) {
                   await _speakRealVoice('${_chatFeed.first['user']} diz: ${_chatFeed.first['msg']}');
                 } else if (cmd == 'sound_clap' && !_isMuted) {
-                  await sfxAudioPlayer.play(UrlSource(DefaultMediaLibrary.onlineSoundsRepository['url']!));
+                  await sfxAudioPlayer.play(UrlSource(DefaultMediaLibrary.onlineSoundsRepository.first['url']!));
                 } else if (cmd == 'sound_horn' && !_isMuted) {
-                  await sfxAudioPlayer.play(UrlSource(DefaultMediaLibrary.onlineSoundsRepository['url']!));
+                  await sfxAudioPlayer.play(UrlSource(DefaultMediaLibrary.onlineSoundsRepository.last['url']!));
+
                 } else if (cmd == 'test_alert') {
                   LocalObsServer.pushAlert('Stream Deck Pro', 'Alerta disparado pela consola!', DefaultMediaLibrary.builtInGifsAndPngs.first['url']!);
                 }
