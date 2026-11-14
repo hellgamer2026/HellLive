@@ -101,12 +101,12 @@ class _ActionsStudioTabState extends State<ActionsStudioTab> {
       ),
     );
   }
-  Future<List<Map<String, String>>> _fetchIconifySearch(String query) async {
+    Future<List<Map<String, String>>> _fetchIconifySearch(String query) async {
     final clean = query.trim();
     if (clean.isEmpty) return [];
     final results = <Map<String, String>>[];
     try {
-      final res = await http.get(Uri.parse('https://iconify.design{Uri.encodeComponent(clean)}&limit=24'));
+      final res = await http.get(Uri.parse('https://api.iconify.design/search?query=${Uri.encodeComponent(clean)}&limit=24'));
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         final icons = List<String>.from(data['icons'] ?? []);
@@ -115,7 +115,7 @@ class _ActionsStudioTabState extends State<ActionsStudioTab> {
           if (parts.length == 2) {
             results.add({
               'name': parts[1],
-              'url': 'https://iconify.design{parts[0]}/${parts[1]}.png?height=96',
+              'url': 'https://api.iconify.design/${parts[0]}/${parts[1]}.png?height=96',
             });
           }
         }
@@ -390,6 +390,130 @@ class _ActionsStudioTabState extends State<ActionsStudioTab> {
                           }
                         },
                         icon: Icon(isRecording ? Icons.stop : Icons.mic, color: Colors.white, size: 18),
+                                                label: Text(isRecording ? 'Parar Gravação' : 'Gravar Voz Própria', style: const TextStyle(color: Colors.white, fontSize: 12)),
+                      ),
+                      if (customVoicePath != null) ...[
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.play_circle_fill, color: Colors.greenAccent),
+                          onPressed: () => _togglePlayAudio(customVoicePath!, isLocal: true, onStateUpdate: () => setModalState(() {})),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                          onPressed: () => setModalState(() => customVoicePath = null),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const Divider(color: Colors.white12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('🔊 Biblioteca de Sons (Escolhe apenas 1):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: Color(0xFF38BDF8))),
+                      TextButton.icon(
+                        onPressed: () async {
+                          final res = await FilePicker.platform.pickFiles(type: FileType.audio);
+                          if (res != null && res.files.single.path != null) {
+                            setModalState(() {
+                              chosenSound = res.files.single.path!;
+                              customVoicePath = null;
+                              widget.sounds.insert(0, {'name': res.files.single.name, 'url': res.files.single.path!});
+                            });
+                          }
+                        },
+                        icon: const Icon(Icons.upload_file, size: 16),
+                        label: const Text('+ Ficheiro Áudio', style: TextStyle(fontSize: 11.5)),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: soundSearchCtrl,
+                          onSubmitted: (v) => setModalState(() => soundQuery = v),
+                          decoration: const InputDecoration(hintText: 'Filtrar sons da biblioteca...', isDense: true, border: OutlineInputBorder()),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      IconButton(
+                        icon: const Icon(Icons.search, color: Color(0xFF38BDF8)),
+                        onPressed: () => setModalState(() => soundQuery = soundSearchCtrl.text),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  ListTile(
+                    dense: true,
+                    leading: Icon(chosenSound.isEmpty && customVoicePath == null ? Icons.radio_button_checked : Icons.radio_button_unchecked, color: const Color(0xFF38BDF8)),
+                    title: const Text('Sem Som (Silencioso)', style: TextStyle(fontSize: 12.5)),
+                    onTap: () => setModalState(() {
+                      chosenSound = '';
+                      customVoicePath = null;
+                    }),
+                  ),
+                  ...uniqueSounds.map((s) {
+                    final url = s['url']!;
+                    final isSelected = chosenSound == url;
+                    final isPlaying = _currentlyPlayingUrl == url;
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 4),
+                      decoration: BoxDecoration(
+                        color: isSelected ? const Color(0xFF122E73) : const Color(0xFF0B1636),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: isSelected ? const Color(0xFF38BDF8) : Colors.white12),
+                      ),
+                      child: ListTile(
+                        dense: true,
+                        leading: Icon(isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked, color: isSelected ? const Color(0xFF38BDF8) : Colors.white38),
+                        title: Text(s['name'] ?? '', style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: Icon(isPlaying ? Icons.stop_circle : Icons.play_circle_fill, color: isPlaying ? Colors.redAccent : Colors.greenAccent, size: 26),
+                              onPressed: () => _togglePlayAudio(url, onStateUpdate: () => setModalState(() {})),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                setModalState(() {
+                                  chosenSound = url;
+                                  customVoicePath = null;
+                                });
+                              },
+                              child: Text(isSelected ? 'Selecionado' : 'Usar Som', style: TextStyle(fontSize: 11, color: isSelected ? Colors.greenAccent : const Color(0xFF38BDF8))),
+                            ),
+                          ],
+                        ),
+                        onTap: () {
+                          setModalState(() {
+                            chosenSound = url;
+                            customVoicePath = null;
+                          });
+                        },
+                      ),
+                    );
+                  }),
+                  const SizedBox(height: 12),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF), padding: const EdgeInsets.symmetric(vertical: 13)),
+                    onPressed: () async {
+                      await widget.sfxPlayer.stop();
+                      setState(() => _currentlyPlayingUrl = null);
+                      onSave(chosenMedia, chosenSound, customVoicePath, ttsThank, msgCtrl.text.trim());
+                      if (ctx.mounted) Navigator.pop(ctx);
+                    },
+                    child: const Text('Guardar Alterações', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildGoalOverlayGraphic(String type, double pct, String title, int current, int target) {
     final pctInt = (pct * 100).round();
 
@@ -598,6 +722,39 @@ class _ActionsStudioTabState extends State<ActionsStudioTab> {
                         children: [
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                        children: [
+                              Text('${item['name']} · [${item['brand']}]', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: Color(0xFF38BDF8))),
+                              if (isSel) const Icon(Icons.check_circle, color: Colors.greenAccent, size: 18),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          _buildGoalOverlayGraphic(type, 0.65, titleCtrl.text.trim().isEmpty ? 'Meta da Live' : titleCtrl.text.trim(), 650, 1000),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF), padding: const EdgeInsets.symmetric(vertical: 13)),
+                  onPressed: () {
+                    setState(() {
+                      goal['title'] = titleCtrl.text.trim().isEmpty ? 'Meta da Live' : titleCtrl.text.trim();
+                      goal['target'] = int.tryParse(targetCtrl.text.trim()) ?? 1000;
+                      goal['overlayType'] = selectedOverlay;
+                    });
+                    widget.onStateChanged();
+                    Navigator.pop(ctx);
+                  },
+                  child: const Text('Aplicar Overlay à Meta', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _openAddPresentPicker() {
     final searchCtrl = TextEditingController();
     String query = '';
@@ -813,3 +970,183 @@ class _ActionsStudioTabState extends State<ActionsStudioTab> {
                         onTapImage: () => _openQuickImagePicker(g['png'] ?? '', (newImg) => setState(() => g['png'] = newImg)),
                         onEdit: () => _openRichCustomizer(
                           title: g['name'] ?? 'Presente',
+                          initialMedia: g['png'] ?? '',
+                          initialSound: g['sound'] ?? '',
+                          initialCustomVoice: g['customVoicePath'],
+                          initialTtsThank: g['ttsThank'] ?? true,
+                          initialCustomMessage: g['customMessage'],
+                          defaultMessageTemplate: defaultMsg,
+                          onSave: (m, s, vPath, tts, msg) => setState(() {
+                            g['png'] = m;
+                            g['sound'] = s;
+                            g['customVoicePath'] = vPath;
+                            g['ttsThank'] = tts;
+                            g['customMessage'] = msg;
+                          }),
+                        ),
+                        onPlayPreview: () {
+                          final raw = (g['customMessage'] == null || g['customMessage'].toString().trim().isEmpty) ? defaultMsg : g['customMessage'].toString();
+                          final spoken = raw.replaceAll('{user}', 'Apoiante');
+                          _openInstantPreviewDialog(
+                            title: g['name'] ?? 'Presente',
+                            mediaUrl: g['png'] ?? '',
+                            soundUrl: g['sound'] ?? '',
+                            customVoicePath: g['customVoicePath'],
+                            message: spoken,
+                          );
+                          if (!hasVoice && (g['ttsThank'] ?? true) == true) {
+                            widget.onSpeakVoice(spoken);
+                          }
+                        },
+                        onToggleEnabled: (v) => setState(() => g['enabled'] = v),
+                      );
+                    }),
+                  ],
+                ),
+                ListView(
+                  padding: const EdgeInsets.all(14),
+                  children: [
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF), padding: const EdgeInsets.symmetric(vertical: 12)),
+                      onPressed: () {
+                        setState(() {
+                          widget.alertsList.insert(0, {
+                            'id': 'al_${DateTime.now().millisecondsSinceEpoch}',
+                            'trigger': 'follow',
+                            'name': 'Novo Alerta Personalizado',
+                            'enabled': true,
+                            'ttsThank': true,
+                            'customVoicePath': null,
+                            'media': DefaultMediaLibrary.builtInGifsAndPngs.first['url']!,
+                            'sound': '',
+                          });
+                        });
+                      },
+                      icon: const Icon(Icons.add_alert, color: Colors.white),
+                      label: const Text('+ Criar Novo Alerta', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    ),
+                    const SizedBox(height: 12),
+                    ...widget.alertsList.asMap().entries.map((entry) {
+                      final idx = entry.key;
+                      final al = entry.value;
+                      final hasVoice = al['customVoicePath'] != null;
+                      final hasSound = (al['sound'] ?? '').toString().isNotEmpty;
+                      final defaultMsg = '{user} ativou ${al['name']}!';
+
+                      return _buildUniformActionCard(
+                        title: al['name'] ?? 'Alerta',
+                        subtitle: hasVoice ? '🎙️ Voz gravada' : (hasSound ? '🔊 Som personalizado' : '🔇 Sem som selecionado'),
+                        mediaUrl: al['media'] ?? '',
+                        isEnabled: al['enabled'] == true,
+                        onDelete: () => setState(() => widget.alertsList.removeAt(idx)),
+                        onTapImage: () => _openQuickImagePicker(al['media'] ?? '', (newImg) => setState(() => al['media'] = newImg)),
+                        onEdit: () => _openRichCustomizer(
+                          title: al['name'] ?? 'Alerta',
+                          initialMedia: al['media'] ?? '',
+                          initialSound: al['sound'] ?? '',
+                          initialCustomVoice: al['customVoicePath'],
+                          initialTtsThank: al['ttsThank'] ?? true,
+                          initialCustomMessage: al['customMessage'],
+                          defaultMessageTemplate: defaultMsg,
+                          onSave: (m, s, vPath, tts, msg) => setState(() {
+                            al['media'] = m;
+                            al['sound'] = s;
+                            al['customVoicePath'] = vPath;
+                            al['ttsThank'] = tts;
+                            al['customMessage'] = msg;
+                          }),
+                        ),
+                        onPlayPreview: () {
+                          final raw = (al['customMessage'] == null || al['customMessage'].toString().trim().isEmpty) ? defaultMsg : al['customMessage'].toString();
+                          final spoken = raw.replaceAll('{user}', 'Apoiante');
+                          _openInstantPreviewDialog(
+                            title: al['name'] ?? 'Alerta',
+                            mediaUrl: al['media'] ?? '',
+                            soundUrl: al['sound'] ?? '',
+                            customVoicePath: al['customVoicePath'],
+                            message: spoken,
+                          );
+                          if (!hasVoice && (al['ttsThank'] ?? true) == true) {
+                            widget.onSpeakVoice(spoken);
+                          }
+                        },
+                        onToggleEnabled: (v) => setState(() => al['enabled'] = v),
+                      );
+                    }),
+                  ],
+                ),
+                ListView(
+                  padding: const EdgeInsets.all(14),
+                  children: [
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF), padding: const EdgeInsets.symmetric(vertical: 12)),
+                      onPressed: () {
+                        setState(() {
+                          widget.goalsList.insert(0, {
+                            'id': 'goal_${DateTime.now().millisecondsSinceEpoch}',
+                            'title': 'Nova Meta da Live',
+                            'current': 250,
+                            'target': 1000,
+                            'overlayType': 'tiktok_capsule',
+                          });
+                        });
+                        widget.onStateChanged();
+                      },
+                      icon: const Icon(Icons.add_chart, color: Colors.white),
+                      label: const Text('+ Criar Nova Meta', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    ),
+                    const SizedBox(height: 12),
+                    ...widget.goalsList.asMap().entries.map((entry) {
+                      final idx = entry.key;
+                      final goal = entry.value;
+                      final int current = goal['current'] ?? 0;
+                      final int target = (goal['target'] ?? 1000) == 0 ? 1000 : goal['target'];
+                      final double pct = (current / target).clamp(0.0, 1.0);
+                      final String overlayType = goal['overlayType'] ?? 'tiktok_capsule';
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(12),
+                        decoration: _neonCard(),
+                        child: Column(
+                          children: [
+                            _buildGoalOverlayGraphic(overlayType, pct, goal['title'] ?? 'Meta', current, target),
+                            const SizedBox(height: 10),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E78FF), padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
+                                  onPressed: () => _openGoalEditAndGallery(goal),
+                                  icon: const Icon(Icons.style, size: 16, color: Colors.white),
+                                  label: const Text('Estilo TikFinity / Studio', style: TextStyle(color: Colors.white, fontSize: 11.5)),
+                                ),
+                                ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green, padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
+                                  onPressed: () => _openGoalSimulator(goal),
+                                  icon: const Icon(Icons.play_arrow, size: 18, color: Colors.white),
+                                  label: const Text('Simular Ao Vivo', style: TextStyle(color: Colors.white, fontSize: 11.5)),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                                  onPressed: () {
+                                    setState(() => widget.goalsList.removeAt(idx));
+                                    widget.onStateChanged();
+                                  },
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
